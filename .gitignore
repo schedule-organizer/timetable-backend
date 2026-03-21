@@ -1,0 +1,86 @@
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+
+# Dependency directories
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/
+
+# Build and cache artifacts
+dist/
+build/
+coverage/
+.cache/
+.parcel-cache/
+.turbo/
+.next/
+out/
+tmp/
+temp/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Java / JVM
+*.class
+*.jar
+*.war
+*.ear
+.gradle/
+target/
+
+# Editor and IDE metadata
+.idea/
+.vscode/
+.cursor/
+.cursor-tutor/
+.vs/
+.fleet/
+.history/
+*.code-workspace
+*.iml
+*.ipr
+*.iws
+
+# AI and local assistant tooling
+.augment/
+.windsurf/
+.claude/
+
+# Testing and local databases
+*.sqlite
+*.sqlite3
+*.db
+
+# Misc
+*.swp
+*.swo
+*~
