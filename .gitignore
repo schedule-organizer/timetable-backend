@@ -75,6 +75,10 @@ target/
 .windsurf/
 .claude/
 
+# BMAD (local install - do not push)
+.agents/
+_bmad/
+
 # Testing and local databases
 *.sqlite
 *.sqlite3
