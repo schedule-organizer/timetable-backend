@@ -1,0 +1,13 @@
+# Production profile overrides.
+# Activate with: SPRING_PROFILES_ACTIVE=prod
+
+spring:
+  jpa:
+    open-in-view: false
+
+# Swagger UI and OpenAPI spec are disabled in production.
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
