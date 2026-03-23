@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: schediflow-backend
+
+  # Default datasource — H2 in-memory for local dev without PostgreSQL.
+  # PostgreSQL compat mode enables BIGSERIAL, JSONB, and TIMESTAMP WITH TIME ZONE.
+  # Override with environment variables (SPRING_DATASOURCE_*) for staging/prod.
+  datasource:
+    url: jdbc:h2:mem:schediflow;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: none   # Flyway owns schema management
+    show-sql: false
+
+  flyway:
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+
+  h2:
+    console:
+      enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+app:
+  jwt:
+    # Loaded from JWT_SECRET env var. Must be a Base64-encoded key >= 32 bytes.
+    # The default below is for local dev only — always override in staging/prod.
+    secret: ${JWT_SECRET:Y2hhbmdlLXRoaXMtaW4tcHJvZHVjdGlvbi1hdC1sZWFzdC0zMi1ieXRlcw==}
+    access-token-expiry-ms: 900000  # 15 minutes
+  cors:
+    # Comma-separated list of allowed frontend origins. Override via ALLOWED_ORIGINS env var.
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs       # OpenAPI JSON spec
+  swagger-ui:
+    path: /swagger-ui.html   # Swagger UI
+    operations-sorter: alpha
+    tags-sorter: alpha
