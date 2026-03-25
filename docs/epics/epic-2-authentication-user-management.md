@@ -1,5 +1,5 @@
 # Epic 2 — Authentication & User Management
-**Status:** Not Started | **MVP:** Yes | **Total Points:** 26 SP
+**Status:** In Progress | **MVP:** Yes | **Total Points:** 26 SP
 
 ## Goal
 Implement the full authentication lifecycle — institution self-registration, email/password login, JWT access + refresh token flow, teacher invitation via email, and user profile management.
@@ -10,7 +10,7 @@ The primary persona (Timetabler / Scheduling Coordinator) is non-technical. Onbo
 ## Stories
 | Story ID | Description | Points | Status |
 |---|---|---|---|
-| AUTH-01 | `POST /api/v1/auth/register` — institution self-registration: creates `Tenant` + first `Admin` user, returns JWT | 3 | Not Started |
+| AUTH-01 | `POST /api/v1/auth/register` — institution self-registration: creates `Tenant` + first `Admin` user, returns JWT | 3 | Done |
 | AUTH-02 | `POST /api/v1/auth/login` — email/password login, returns JWT access token (15 min) + `HttpOnly` refresh cookie (7 days) | 3 | Not Started |
 | AUTH-03 | `POST /api/v1/auth/refresh` — validates refresh cookie, returns new access token | 2 | Not Started |
 | AUTH-04 | `POST /api/v1/auth/logout` — invalidates (deletes) refresh token server-side | 1 | Not Started |
