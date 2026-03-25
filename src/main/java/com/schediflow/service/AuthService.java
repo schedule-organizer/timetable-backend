@@ -4,6 +4,7 @@ import com.schediflow.domain.RefreshToken;
 import com.schediflow.domain.Tenant;
 import com.schediflow.domain.User;
 import com.schediflow.exception.ConflictException;
+import com.schediflow.exception.UnauthorizedException;
 import com.schediflow.repository.RefreshTokenRepository;
 import com.schediflow.repository.TenantRepository;
 import com.schediflow.repository.UserRepository;
@@ -119,4 +120,82 @@ public class AuthService {
      */
     public record RegistrationResult(String accessToken, String refreshToken,
                                       long accessTokenExpiryMs, long refreshTokenExpiryMs) {}
+
+    /**
+     * Authenticates a user by email and password.
+     * Deletes any existing refresh tokens before issuing a new one.
+     *
+     * @throws UnauthorizedException for any credential or status failure (no hint which field failed)
+     */
+    @Transactional
+    public LoginResult login(String email, String rawPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UnauthorizedException("Invalid credentials"));
+
+        if (!passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
+            throw new UnauthorizedException("Invalid credentials");
+        }
+
+        if (!"ACTIVE".equals(user.getStatus())) {
+            throw new UnauthorizedException("Invalid credentials");
+        }
+
+        refreshTokenRepository.deleteByUserId(user.getId());
+
+        RefreshToken refreshToken = new RefreshToken();
+        refreshToken.setUserId(user.getId());
+        refreshToken.setToken(UUID.randomUUID().toString());
+        refreshToken.setExpiresAt(OffsetDateTime.now().plusNanos(refreshTokenExpiryMs * 1_000_000L));
+        refreshTokenRepository.save(refreshToken);
+
+        String accessToken = jwtTokenProvider.generateToken(
+                user.getId(), user.getTenantId(), user.getRole(), user.getEmail());
+
+        return new LoginResult(accessToken, refreshToken.getToken(),
+                jwtTokenProvider.getAccessTokenExpiryMs(), refreshTokenExpiryMs);
+    }
+
+    public record LoginResult(String accessToken, String refreshToken,
+                               long accessTokenExpiryMs, long refreshTokenExpiryMs) {}
+
+    /**
+     * Issues a new JWT access token for a valid, unexpired refresh token.
+     * Does NOT rotate the refresh token (post-MVP).
+     *
+     * @throws UnauthorizedException if the token is missing, expired, or the user is inactive
+     */
+    @Transactional(readOnly = true)
+    public TokenRefreshResult refresh(String tokenValue) {
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(tokenValue)
+                .orElseThrow(() -> new UnauthorizedException("Invalid refresh token"));
+
+        if (refreshToken.getExpiresAt().isBefore(OffsetDateTime.now())) {
+            throw new UnauthorizedException("Invalid refresh token");
+        }
+
+        User user = userRepository.findById(refreshToken.getUserId())
+                .orElseThrow(() -> new UnauthorizedException("Invalid refresh token"));
+
+        if (!"ACTIVE".equals(user.getStatus())) {
+            throw new UnauthorizedException("Invalid refresh token");
+        }
+
+        String accessToken = jwtTokenProvider.generateToken(
+                user.getId(), user.getTenantId(), user.getRole(), user.getEmail());
+
+        return new TokenRefreshResult(accessToken, jwtTokenProvider.getAccessTokenExpiryMs());
+    }
+
+    public record TokenRefreshResult(String accessToken, long accessTokenExpiryMs) {}
+
+    /**
+     * Deletes the server-side refresh token record.
+     * Idempotent — safe to call when no token is present or it was already deleted.
+     */
+    @Transactional
+    public void logout(String tokenValue) {
+        if (tokenValue != null) {
+            refreshTokenRepository.deleteByToken(tokenValue);
+        }
+    }
 }
