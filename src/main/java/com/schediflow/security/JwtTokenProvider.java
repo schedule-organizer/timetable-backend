@@ -45,6 +45,10 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    public long getAccessTokenExpiryMs() {
+        return accessTokenExpiryMs;
+    }
+
     /**
      * Parses and validates the token, returning its claims.
      * Throws {@link JwtException} if the token is invalid or expired.
