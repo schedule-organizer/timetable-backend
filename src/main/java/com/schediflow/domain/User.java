@@ -33,6 +33,9 @@ public class User {
     @Column(nullable = false, length = 50)
     private String status = "PENDING_REGISTRATION";
 
+    @Column(name = "display_name")
+    private String displayName;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -52,5 +55,7 @@ public class User {
     public void setRole(String role) { this.role = role; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getDisplayName() { return displayName; }
+    public void setDisplayName(String displayName) { this.displayName = displayName; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
 }

@@ -40,9 +40,13 @@ app:
     secret: ${JWT_SECRET:Y2hhbmdlLXRoaXMtaW4tcHJvZHVjdGlvbi1hdC1sZWFzdC0zMi1ieXRlcw==}
     access-token-expiry-ms: 900000         # 15 minutes
     refresh-token-expiry-ms: 604800000     # 7 days
+  ratelimit:
+    max-requests: 10                       # per IP per window
+    window-ms: 60000                       # 1 minute
   cors:
     # Comma-separated list of allowed frontend origins. Override via ALLOWED_ORIGINS env var.
     allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
 
 springdoc:
   api-docs:

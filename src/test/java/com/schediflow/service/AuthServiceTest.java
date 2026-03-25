@@ -4,11 +4,14 @@ import com.schediflow.domain.RefreshToken;
 import com.schediflow.domain.Tenant;
 import com.schediflow.domain.User;
 import com.schediflow.exception.ConflictException;
+import com.schediflow.exception.UnauthorizedException;
 import com.schediflow.repository.RefreshTokenRepository;
 import com.schediflow.repository.TenantRepository;
 import com.schediflow.repository.UserRepository;
 import com.schediflow.security.JwtTokenProvider;
+import com.schediflow.service.AuthService.LoginResult;
 import com.schediflow.service.AuthService.RegistrationResult;
+import com.schediflow.service.AuthService.TokenRefreshResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.OffsetDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -144,6 +148,187 @@ class AuthServiceTest {
         verify(userRepository).save(cap.capture());
         assertThat(cap.getValue().getPasswordHash()).isEqualTo("$2a$hashed");
         assertThat(cap.getValue().getPasswordHash()).doesNotContain("mySecret1");
+    }
+
+    // ── login() ───────────────────────────────────────────────────────────────
+
+    @Test
+    void login_success_returnsTokens() {
+        User user = new User();
+        setUserId(user, 7L);
+        user.setEmail("teacher@school.edu");
+        user.setPasswordHash("$2a$hashed");
+        user.setRole("TEACHER");
+        user.setStatus("ACTIVE");
+        user.setTenantId(3L);
+
+        when(userRepository.findByEmail("teacher@school.edu")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("pass1234", "$2a$hashed")).thenReturn(true);
+        doNothing().when(refreshTokenRepository).deleteByUserId(7L);
+        when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(jwtTokenProvider.generateToken(7L, 3L, "TEACHER", "teacher@school.edu")).thenReturn("jwt");
+        when(jwtTokenProvider.getAccessTokenExpiryMs()).thenReturn(900000L);
+
+        LoginResult result = authService.login("teacher@school.edu", "pass1234");
+
+        assertThat(result.accessToken()).isEqualTo("jwt");
+        assertThat(result.refreshToken()).isNotBlank();
+        assertThat(result.accessTokenExpiryMs()).isEqualTo(900000L);
+        verify(refreshTokenRepository).deleteByUserId(7L);
+    }
+
+    @Test
+    void login_unknownEmail_throwsUnauthorized() {
+        when(userRepository.findByEmail("noone@school.edu")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.login("noone@school.edu", "pass1234"))
+                .isInstanceOf(UnauthorizedException.class);
+
+        verify(passwordEncoder, never()).matches(any(), any());
+    }
+
+    @Test
+    void login_wrongPassword_throwsUnauthorized() {
+        User user = new User();
+        setUserId(user, 1L);
+        user.setEmail("a@b.com");
+        user.setPasswordHash("$2a$hashed");
+        user.setStatus("ACTIVE");
+        user.setRole("ADMIN");
+        user.setTenantId(1L);
+        when(userRepository.findByEmail("a@b.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong", "$2a$hashed")).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.login("a@b.com", "wrong"))
+                .isInstanceOf(UnauthorizedException.class);
+
+        verify(refreshTokenRepository, never()).deleteByUserId(any());
+    }
+
+    @Test
+    void login_inactiveUser_throwsUnauthorized() {
+        User user = new User();
+        setUserId(user, 2L);
+        user.setEmail("x@y.com");
+        user.setPasswordHash("$2a$hashed");
+        user.setStatus("INACTIVE");
+        user.setRole("ADMIN");
+        user.setTenantId(1L);
+        when(userRepository.findByEmail("x@y.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("pass1234", "$2a$hashed")).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.login("x@y.com", "pass1234"))
+                .isInstanceOf(UnauthorizedException.class);
+
+        verify(refreshTokenRepository, never()).deleteByUserId(any());
+    }
+
+    @Test
+    void login_deletesExistingRefreshTokensBeforeIssuingNew() {
+        User user = new User();
+        setUserId(user, 9L);
+        user.setEmail("admin@org.edu");
+        user.setPasswordHash("$2a$hashed");
+        user.setStatus("ACTIVE");
+        user.setRole("ADMIN");
+        user.setTenantId(5L);
+        when(userRepository.findByEmail("admin@org.edu")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("pass1234", "$2a$hashed")).thenReturn(true);
+        doNothing().when(refreshTokenRepository).deleteByUserId(9L);
+        when(refreshTokenRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(jwtTokenProvider.generateToken(9L, 5L, "ADMIN", "admin@org.edu")).thenReturn("t");
+        when(jwtTokenProvider.getAccessTokenExpiryMs()).thenReturn(900000L);
+
+        authService.login("admin@org.edu", "pass1234");
+
+        var order = inOrder(refreshTokenRepository);
+        order.verify(refreshTokenRepository).deleteByUserId(9L);
+        order.verify(refreshTokenRepository).save(any(RefreshToken.class));
+    }
+
+    // ── refresh() ─────────────────────────────────────────────────────────────
+
+    @Test
+    void refresh_validToken_returnsNewAccessToken() {
+        RefreshToken rt = new RefreshToken();
+        rt.setUserId(5L);
+        rt.setToken("valid-uuid");
+        rt.setExpiresAt(OffsetDateTime.now().plusDays(1));
+
+        User user = new User(); setUserId(user, 5L);
+        user.setEmail("a@b.com"); user.setRole("ADMIN"); user.setStatus("ACTIVE");
+        user.setTenantId(2L);
+
+        when(refreshTokenRepository.findByToken("valid-uuid")).thenReturn(Optional.of(rt));
+        when(userRepository.findById(5L)).thenReturn(Optional.of(user));
+        when(jwtTokenProvider.generateToken(5L, 2L, "ADMIN", "a@b.com")).thenReturn("new.jwt");
+        when(jwtTokenProvider.getAccessTokenExpiryMs()).thenReturn(900000L);
+
+        TokenRefreshResult result = authService.refresh("valid-uuid");
+
+        assertThat(result.accessToken()).isEqualTo("new.jwt");
+        assertThat(result.accessTokenExpiryMs()).isEqualTo(900000L);
+    }
+
+    @Test
+    void refresh_unknownToken_throwsUnauthorized() {
+        when(refreshTokenRepository.findByToken("bad")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.refresh("bad"))
+                .isInstanceOf(UnauthorizedException.class);
+    }
+
+    @Test
+    void refresh_expiredToken_throwsUnauthorized() {
+        RefreshToken rt = new RefreshToken();
+        rt.setUserId(1L);
+        rt.setToken("expired-uuid");
+        rt.setExpiresAt(OffsetDateTime.now().minusSeconds(1));
+
+        when(refreshTokenRepository.findByToken("expired-uuid")).thenReturn(Optional.of(rt));
+
+        assertThatThrownBy(() -> authService.refresh("expired-uuid"))
+                .isInstanceOf(UnauthorizedException.class);
+
+        verify(userRepository, never()).findById(any());
+    }
+
+    @Test
+    void refresh_inactiveUser_throwsUnauthorized() {
+        RefreshToken rt = new RefreshToken();
+        rt.setUserId(3L);
+        rt.setToken("active-uuid");
+        rt.setExpiresAt(OffsetDateTime.now().plusDays(1));
+
+        User user = new User(); setUserId(user, 3L);
+        user.setEmail("x@y.com"); user.setRole("ADMIN"); user.setStatus("INACTIVE");
+        user.setTenantId(1L);
+
+        when(refreshTokenRepository.findByToken("active-uuid")).thenReturn(Optional.of(rt));
+        when(userRepository.findById(3L)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> authService.refresh("active-uuid"))
+                .isInstanceOf(UnauthorizedException.class);
+
+        verify(jwtTokenProvider, never()).generateToken(any(), any(), any(), any());
+    }
+
+    // ── logout() ──────────────────────────────────────────────────────────────
+
+    @Test
+    void logout_withToken_deletesRefreshToken() {
+        doNothing().when(refreshTokenRepository).deleteByToken("some-uuid");
+
+        authService.logout("some-uuid");
+
+        verify(refreshTokenRepository).deleteByToken("some-uuid");
+    }
+
+    @Test
+    void logout_withoutToken_isNoOp() {
+        authService.logout(null);
+
+        verify(refreshTokenRepository, never()).deleteByToken(any());
     }
 
     // ── generateUniqueSlug() ───────────────────────────────────────────────────
