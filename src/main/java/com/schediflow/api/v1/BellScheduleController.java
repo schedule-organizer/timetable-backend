@@ -13,6 +13,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * CRUD endpoints for bell schedules within a tenant.
+ * All operations are restricted to ADMIN only — institution configuration is an
+ * administrative surface and must not be accessible to MODERATOR or TEACHER roles.
+ */
 @RestController
 @RequestMapping("/api/v1/bell-schedules")
 public class BellScheduleController {
@@ -24,17 +29,19 @@ public class BellScheduleController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<BellScheduleResponse>> list() {
         return ResponseEntity.ok(bellScheduleService.list());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BellScheduleResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(bellScheduleService.getById(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BellScheduleResponse> create(
             @AuthenticationPrincipal JwtPrincipal principal,
             @Valid @RequestBody BellScheduleRequest request) {
@@ -43,7 +50,7 @@ public class BellScheduleController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BellScheduleResponse> update(
             @AuthenticationPrincipal JwtPrincipal principal,
             @PathVariable Long id,
@@ -52,7 +59,7 @@ public class BellScheduleController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(
             @AuthenticationPrincipal JwtPrincipal principal,
             @PathVariable Long id) {

@@ -47,11 +47,13 @@ public class SettingsController {
      * GET /api/v1/settings
      *
      * <p>Returns the current tenant's settings JSON (locale, timezone, terminology overrides,
-     * constraint defaults, etc.).</p>
+     * constraint defaults, etc.). Restricted to ADMIN — institution configuration is an
+     * administrative surface per the RBAC matrix.</p>
      *
-     * @return 200 OK with the settings blob; 401 if unauthenticated
+     * @return 200 OK with the settings blob; 401 if unauthenticated; 403 if caller lacks ADMIN role
      */
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<JsonNode> getSettings(@AuthenticationPrincipal JwtPrincipal principal) {
         return ResponseEntity.ok(settingsService.getSettings(principal.tenantId()));
     }

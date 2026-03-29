@@ -1,5 +1,9 @@
 # Deferred work
 
+## Deferred from: code review of story 3.config-10.md (2026-03-30)
+
+- **Deduplicate `createModUser` across endpoint tests** — Same invite/register/role-promotion flow is copied into `AcademicYearEndpointTest`, `TermEndpointTest`, `BellScheduleEndpointTest`, and `TenantSettingsEndpointTest`; consider a shared test helper or base fixture when touching this area again.
+
 ## Deferred from: code review of story 3.config-09.md (2026-03-30)
 
 - **Sprint status `3-config-01` / `3-config-02` as `done`** — Deferred during code review (choice **0**); verify both stories are actually complete and fix `sprint-status.yaml` if not.

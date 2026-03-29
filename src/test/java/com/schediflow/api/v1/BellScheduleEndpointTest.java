@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -34,6 +35,7 @@ class BellScheduleEndpointTest {
 
     private String adminToken;
     private String teacherToken;
+    private String modToken;
     private String otherTenantAdminToken;
 
     private static final String BASE_URL = "/api/v1/bell-schedules";
@@ -71,6 +73,9 @@ class BellScheduleEndpointTest {
                 .andExpect(status().isOk());
 
         teacherToken = loginAndGetToken(teacherEmail, PASSWORD);
+
+        String modEmail = "mod+" + UUID.randomUUID() + "@bell-test.edu";
+        modToken = createModUser(modEmail);
 
         String otherEmail = "admin+" + UUID.randomUUID() + "@other-bell.edu";
         mockMvc.perform(post("/api/v1/auth/register")
@@ -297,5 +302,80 @@ class BellScheduleEndpointTest {
         mockMvc.perform(delete(BASE_URL + "/" + id)
                         .header("Authorization", "Bearer " + teacherToken))
                 .andExpect(status().isForbidden());
+    }
+
+    // ── Role guard (MOD) ──────────────────────────────────────────────────────
+
+    @Test
+    void post_asMod_returns403() throws Exception {
+        mockMvc.perform(post(BASE_URL)
+                        .header("Authorization", "Bearer " + modToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(scheduleBody("X", false, List.of()))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void put_asMod_returns403() throws Exception {
+        long id = createSchedule("S1", false, List.of());
+
+        mockMvc.perform(put(BASE_URL + "/" + id)
+                        .header("Authorization", "Bearer " + modToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(scheduleBody("X", false, List.of()))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void delete_asMod_returns403() throws Exception {
+        long id = createSchedule("S1", false, List.of());
+
+        mockMvc.perform(delete(BASE_URL + "/" + id)
+                        .header("Authorization", "Bearer " + modToken))
+                .andExpect(status().isForbidden());
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private String createModUser(String email) throws Exception {
+        mockMvc.perform(post("/api/v1/users/invite")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("email", email))))
+                .andExpect(status().isCreated());
+
+        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
+        verify(emailService).sendInvitation(eq(email), urlCaptor.capture());
+        String rawToken = urlCaptor.getValue();
+        rawToken = rawToken.substring(rawToken.indexOf("token=") + 6);
+
+        mockMvc.perform(post("/api/v1/auth/complete-registration")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "token", rawToken,
+                                "password", PASSWORD))))
+                .andExpect(status().isOk());
+
+        MvcResult usersResult = mockMvc.perform(get("/api/v1/users")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andReturn();
+        com.fasterxml.jackson.databind.JsonNode users = objectMapper
+                .readTree(usersResult.getResponse().getContentAsString()).get("content");
+        Long userId = null;
+        for (com.fasterxml.jackson.databind.JsonNode user : users) {
+            if (email.equals(user.get("email").asText())) {
+                userId = user.get("id").asLong();
+                break;
+            }
+        }
+
+        mockMvc.perform(put("/api/v1/users/" + userId + "/role")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("role", "MOD"))))
+                .andExpect(status().isOk());
+
+        return loginAndGetToken(email, PASSWORD);
     }
 }

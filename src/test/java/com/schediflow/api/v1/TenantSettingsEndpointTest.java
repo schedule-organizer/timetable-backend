@@ -54,11 +54,25 @@ class TenantSettingsEndpointTest {
     }
 
     @Test
-    void getSettings_asTeacher_returnsEmptyBlob() throws Exception {
+    void getSettings_asAdmin_returnsSettingsBlob() throws Exception {
         mockMvc.perform(get(SETTINGS_URL)
-                        .header("Authorization", "Bearer " + teacherToken))
+                        .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(content().json("{}"));
+    }
+
+    @Test
+    void getSettings_asTeacher_returns403() throws Exception {
+        mockMvc.perform(get(SETTINGS_URL)
+                        .header("Authorization", "Bearer " + teacherToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getSettings_asMod_returns403() throws Exception {
+        mockMvc.perform(get(SETTINGS_URL)
+                        .header("Authorization", "Bearer " + modToken))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -87,7 +101,7 @@ class TenantSettingsEndpointTest {
                 .andExpect(jsonPath("$.constraintDefaults.maxClassesPerDay").value(8));
 
         mockMvc.perform(get(SETTINGS_URL)
-                        .header("Authorization", "Bearer " + teacherToken))
+                        .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.terminology.class").value("form group"))
                 .andExpect(jsonPath("$.terminology.period").value("session"))
