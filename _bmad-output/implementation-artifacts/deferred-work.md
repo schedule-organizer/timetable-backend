@@ -1,5 +1,17 @@
 # Deferred work
 
+## Deferred from: code review of story 3.config-09.md (2026-03-30)
+
+- **Sprint status `3-config-01` / `3-config-02` as `done`** — Deferred during code review (choice **0**); verify both stories are actually complete and fix `sprint-status.yaml` if not.
+
+- **Seed idempotency vs. partial tenant state** — `InstitutionSeedService` only checks academic year count. If years were deleted but other seeded artefacts remained, behaviour may be inconsistent; revisit if admins can create such states.
+
+- **Rate-limit props in tests** — Several endpoint tests set `app.ratelimit.max-requests=500` to avoid 429 flakes; deferred until global test isolation or rate-limit configuration is improved.
+
+## Deferred from: code review of story 3.config-05.md (2026-03-30)
+
+- **Rate-limit / 429 flakiness in unrelated endpoint tests** — `TenantSettingsEndpointTest`, `LogoutEndpointTest`, `TermEndpointTest` (setUp hitting 429). Not introduced by CONFIG-05; track separately when stabilising CI.
+
 ## Deferred from: code review of story 3.config-01.md (2026-03-29)
 
 ## Deferred from: code review of story 3.config-04.md (2026-03-29)

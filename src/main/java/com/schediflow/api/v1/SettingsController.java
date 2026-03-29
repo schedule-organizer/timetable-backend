@@ -1,6 +1,7 @@
 package com.schediflow.api.v1;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.schediflow.dto.response.PublicSettingsResponse;
 import com.schediflow.security.JwtPrincipal;
 import com.schediflow.service.TenantSettingsService;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -24,6 +26,21 @@ public class SettingsController {
 
     public SettingsController(TenantSettingsService settingsService) {
         this.settingsService = settingsService;
+    }
+
+    /**
+     * GET /api/v1/settings/public
+     *
+     * <p>Unauthenticated endpoint that returns the public-facing settings for the tenant
+     * identified by the {@code tenantSlug} query parameter. Only locale, timezone, and
+     * institutionName are returned. Results are cached for 5 minutes.</p>
+     *
+     * @return 200 OK with public settings; 404 if the slug is unknown or the tenant is inactive
+     */
+    @GetMapping("/public")
+    public ResponseEntity<PublicSettingsResponse> getPublicSettings(
+            @RequestParam String tenantSlug) {
+        return ResponseEntity.ok(settingsService.getPublicSettings(tenantSlug));
     }
 
     /**

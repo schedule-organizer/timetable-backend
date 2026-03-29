@@ -5,10 +5,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.schediflow.domain.Tenant;
+import com.schediflow.dto.response.PublicSettingsResponse;
 import com.schediflow.exception.BadRequestException;
 import com.schediflow.exception.ResourceNotFoundException;
 import com.schediflow.exception.SchediFlowException;
 import com.schediflow.repository.TenantRepository;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,10 +30,35 @@ public class TenantSettingsService {
 
     private final TenantRepository tenantRepository;
     private final ObjectMapper objectMapper;
+    private final CacheManager cacheManager;
 
-    public TenantSettingsService(TenantRepository tenantRepository, ObjectMapper objectMapper) {
+    public TenantSettingsService(
+            TenantRepository tenantRepository, ObjectMapper objectMapper, CacheManager cacheManager) {
         this.tenantRepository = tenantRepository;
         this.objectMapper = objectMapper;
+        this.cacheManager = cacheManager;
+    }
+
+    @Cacheable(
+            value = "publicSettings",
+            key = "#tenantSlug.strip()",
+            condition = "#tenantSlug != null && !#tenantSlug.isBlank()")
+    public PublicSettingsResponse getPublicSettings(String tenantSlug) {
+        if (tenantSlug == null || tenantSlug.isBlank()) {
+            throw new BadRequestException("tenantSlug is required");
+        }
+        String slug = tenantSlug.strip();
+        Tenant tenant = tenantRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Tenant not found: " + slug));
+        if (!"ACTIVE".equalsIgnoreCase(tenant.getStatus())) {
+            throw new ResourceNotFoundException("Tenant not found: " + slug);
+        }
+        ObjectNode settings = parseSettings(tenant.getSettings());
+        String locale = settings.has("locale") && settings.get("locale").isTextual()
+                ? settings.get("locale").asText() : null;
+        String timezone = settings.has("timezone") && settings.get("timezone").isTextual()
+                ? settings.get("timezone").asText() : null;
+        return new PublicSettingsResponse(locale, timezone, tenant.getName());
     }
 
     public JsonNode getSettings(Long tenantId) {
@@ -49,7 +78,18 @@ public class TenantSettingsService {
         validateTimezone(current);
         tenant.setSettings(current.toString());
         tenantRepository.save(tenant);
+        evictPublicSettingsCache(tenant.getSlug() == null ? null : tenant.getSlug().strip());
         return current.deepCopy();
+    }
+
+    private void evictPublicSettingsCache(String tenantSlug) {
+        if (tenantSlug == null || tenantSlug.isBlank()) {
+            return;
+        }
+        Cache cache = cacheManager.getCache("publicSettings");
+        if (cache != null) {
+            cache.evict(tenantSlug);
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -67,6 +107,12 @@ public class TenantSettingsService {
         }
         try {
             JsonNode node = objectMapper.readTree(json);
+            // H2 in PostgreSQL mode returns JSONB values double-encoded (e.g. '{}' stored
+            // as JSONB comes back via getString() as '"{}\"' — a JSON string node).
+            // Unwrap one level of string encoding when this happens.
+            if (node.isTextual()) {
+                node = objectMapper.readTree(node.asText());
+            }
             if (node.isObject()) {
                 return objectMapper.createObjectNode().setAll((ObjectNode) node);
             }

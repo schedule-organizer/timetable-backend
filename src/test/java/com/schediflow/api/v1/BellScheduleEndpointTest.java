@@ -173,7 +173,7 @@ class BellScheduleEndpointTest {
 
         mockMvc.perform(get(BASE_URL).header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2));
+                .andExpect(jsonPath("$.length()").value(3));
     }
 
     @Test
@@ -187,10 +187,10 @@ class BellScheduleEndpointTest {
                         .content(objectMapper.writeValueAsString(scheduleBody("Other", false, List.of()))))
                 .andExpect(status().isCreated());
 
-        // Admin tenant should only see their own schedule
+        // Admin tenant: seeded default + S1 (not Other tenant's schedule)
         mockMvc.perform(get(BASE_URL).header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
+                .andExpect(jsonPath("$.length()").value(2));
     }
 
     @Test
