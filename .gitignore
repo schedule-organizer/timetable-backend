@@ -56,6 +56,7 @@ venv/
 *.ear
 .gradle/
 target/
+.mvn/wrapper/
 
 # Editor and IDE metadata
 .idea/
