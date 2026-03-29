@@ -3,6 +3,8 @@
 Multi-tenant SaaS backend for automated school timetable management.
 Built with **Spring Boot 3 / Java 21 / PostgreSQL 16 / Timefold Solver**.
 
+This repo pins Java 21 via `.java-version` and `.sdkmanrc`, so running `sdk env install` (or `sdk env`/`sdk env install; sdk env` in your shell) automatically sets `JAVA_HOME` and Maven in place before you build.
+
 ---
 
 ## Documentation
