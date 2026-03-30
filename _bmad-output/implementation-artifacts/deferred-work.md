@@ -1,5 +1,14 @@
 # Deferred work
 
+## Deferred from: code review of 4.hol-02.md (2026-03-31)
+
+- **No rate-limiting on `POST /api/v1/holidays/import`** — Any ADMIN or MOD can fan out unlimited Calendarific calls; system-wide rate-limiting gap not introduced by this story.
+- **Empty holiday feed returns 200 with all-zero counts** — Indistinguishable from a wrong country/year; design choice, acceptable for now.
+- **Hibernate `tenantFilter` redundancy in `findByHolidayCalendarIdAndTenantIdAndDate`** — Pre-existing pattern across all repositories; if the filter is active it adds a redundant `AND tenant_id = ?` clause.
+- **`BadRequestException` thrown from `CalendarificHolidayFeedClient`** — Minor layering concern; HTTP semantics leaking into integration adapter. Behavior is correct.
+- **`region` blank-string guard duplicated in service and client** — Both sides independently check `isBlank()`; behavior is consistent but guard could be centralised.
+- **`@Transactional` spans outbound HTTP call in `importPublicHolidays`** — Holds a DB connection open during the Calendarific HTTP call (up to 5s). Negligible at expected ADMIN/MOD import frequency; revisit if load warrants splitting fetch from persist.
+
 ## Deferred from: code review of story 3.config-10.md (2026-03-30)
 
 - **Deduplicate `createModUser` across endpoint tests** — Same invite/register/role-promotion flow is copied into `AcademicYearEndpointTest`, `TermEndpointTest`, `BellScheduleEndpointTest`, and `TenantSettingsEndpointTest`; consider a shared test helper or base fixture when touching this area again.
