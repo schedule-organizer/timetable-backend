@@ -15,7 +15,8 @@ import java.util.List;
 
 /**
  * CRUD endpoints for academic years within a tenant.
- * Read operations are open to all authenticated roles; writes are Admin/Mod only.
+ * All operations are restricted to ADMIN only — institution configuration is an
+ * administrative surface and must not be accessible to MODERATOR or TEACHER roles.
  */
 @RestController
 @RequestMapping("/api/v1/academic-years")
@@ -28,17 +29,19 @@ public class AcademicYearController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<AcademicYearResponse>> list() {
         return ResponseEntity.ok(service.list());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AcademicYearResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(service.getById(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AcademicYearResponse> create(
             @AuthenticationPrincipal JwtPrincipal principal,
             @Valid @RequestBody AcademicYearRequest request) {
@@ -47,7 +50,7 @@ public class AcademicYearController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AcademicYearResponse> update(
             @AuthenticationPrincipal JwtPrincipal principal,
             @PathVariable Long id,
@@ -56,7 +59,7 @@ public class AcademicYearController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();

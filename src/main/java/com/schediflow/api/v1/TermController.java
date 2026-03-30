@@ -13,6 +13,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * CRUD endpoints for terms within a tenant.
+ * All operations are restricted to ADMIN only — institution configuration is an
+ * administrative surface and must not be accessible to MODERATOR or TEACHER roles.
+ */
 @RestController
 @RequestMapping("/api/v1/terms")
 public class TermController {
@@ -24,6 +29,7 @@ public class TermController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<TermResponse>> list(
             @AuthenticationPrincipal JwtPrincipal principal,
             @RequestParam Long academicYearId) {
@@ -31,12 +37,13 @@ public class TermController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TermResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(termService.getById(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TermResponse> create(
             @AuthenticationPrincipal JwtPrincipal principal, @Valid @RequestBody TermRequest request) {
         TermResponse body = termService.create(principal.tenantId(), request);
@@ -44,7 +51,7 @@ public class TermController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TermResponse> update(
             @AuthenticationPrincipal JwtPrincipal principal,
             @PathVariable Long id,
@@ -53,7 +60,7 @@ public class TermController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         termService.delete(id);
         return ResponseEntity.noContent().build();

@@ -1,5 +1,6 @@
 package com.schediflow.api.v1;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.schediflow.service.EmailService;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +19,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -36,6 +38,7 @@ class AcademicYearEndpointTest {
 
     private String adminToken;
     private String teacherToken;
+    private String modToken;
     private String otherTenantAdminToken;
 
     private static final String URL = "/api/v1/academic-years";
@@ -74,6 +77,9 @@ class AcademicYearEndpointTest {
                 .andExpect(status().isOk());
 
         teacherToken = loginAndGetToken(teacherEmail, PASSWORD);
+
+        String modEmail = "mod+" + UUID.randomUUID() + "@acyr-test.edu";
+        modToken = createModUser(modEmail);
 
         // Tenant B — separate institution admin (for tenant-isolation test)
         String otherEmail = "admin+" + UUID.randomUUID() + "@other-school.edu";
@@ -210,13 +216,13 @@ class AcademicYearEndpointTest {
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$.length()").value(1));
+                .andExpect(jsonPath("$.length()").value(2));
 
-        // Tenant B sees no years (tenant isolation)
+        // Tenant B: seeded default year only (tenant isolation — not Tenant A's rows)
         mockMvc.perform(get(URL)
                         .header("Authorization", "Bearer " + otherTenantAdminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(0));
+                .andExpect(jsonPath("$.length()").value(1));
     }
 
     @Test
@@ -349,5 +355,89 @@ class AcademicYearEndpointTest {
         mockMvc.perform(delete(URL + "/" + id)
                         .header("Authorization", "Bearer " + teacherToken))
                 .andExpect(status().isForbidden());
+    }
+
+    // ── Role guard (MOD) ──────────────────────────────────────────────────────
+
+    @Test
+    void getList_asMod_returns403() throws Exception {
+        mockMvc.perform(get(URL)
+                        .header("Authorization", "Bearer " + modToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void post_asMod_returns403() throws Exception {
+        mockMvc.perform(post(URL)
+                        .header("Authorization", "Bearer " + modToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                yearPayload("2026/27", "2026-09-01", "2027-06-30", false))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void put_asMod_returns403() throws Exception {
+        long id = createYear("2026/27", "2026-09-01", "2027-06-30", false);
+
+        mockMvc.perform(put(URL + "/" + id)
+                        .header("Authorization", "Bearer " + modToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                yearPayload("2026/27 Updated", "2026-09-01", "2027-06-30", false))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void delete_asMod_returns403() throws Exception {
+        long id = createYear("2026/27", "2026-09-01", "2027-06-30", false);
+
+        mockMvc.perform(delete(URL + "/" + id)
+                        .header("Authorization", "Bearer " + modToken))
+                .andExpect(status().isForbidden());
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private String createModUser(String email) throws Exception {
+        mockMvc.perform(post("/api/v1/users/invite")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("email", email))))
+                .andExpect(status().isCreated());
+
+        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
+        verify(emailService).sendInvitation(eq(email), urlCaptor.capture());
+        String inviteUrl = urlCaptor.getValue();
+        String rawToken = inviteUrl.substring(inviteUrl.indexOf("token=") + 6);
+
+        mockMvc.perform(post("/api/v1/auth/complete-registration")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "token", rawToken,
+                                "password", PASSWORD))))
+                .andExpect(status().isOk());
+
+        MvcResult usersResult = mockMvc.perform(get("/api/v1/users")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode users = objectMapper.readTree(usersResult.getResponse().getContentAsString())
+                .get("content");
+        Long userId = null;
+        for (JsonNode user : users) {
+            if (email.equals(user.get("email").asText())) {
+                userId = user.get("id").asLong();
+                break;
+            }
+        }
+
+        mockMvc.perform(put("/api/v1/users/" + userId + "/role")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("role", "MOD"))))
+                .andExpect(status().isOk());
+
+        return loginAndGetToken(email, PASSWORD);
     }
 }

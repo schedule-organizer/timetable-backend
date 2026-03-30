@@ -7,10 +7,14 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.Map;
+import java.util.UUID;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -23,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@TestPropertySource(properties = "app.ratelimit.max-requests=500")
 class RegisterEndpointTest {
 
     @Autowired MockMvc mockMvc;
@@ -119,6 +124,40 @@ class RegisterEndpointTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void register_seedsDefaultAcademicYearBellScheduleAndSettings() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(
+                                "Seeded School",
+                                "seed+" + UUID.randomUUID() + "@register-seed.test",
+                                "Password1")))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String token = objectMapper.readTree(result.getResponse().getContentAsString())
+                .get("accessToken").asText();
+
+        mockMvc.perform(get("/api/v1/academic-years")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].isActive").value(true));
+
+        mockMvc.perform(get("/api/v1/bell-schedules")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].isDefault").value(true))
+                .andExpect(jsonPath("$[0].periods.length()").value(8))
+                .andExpect(jsonPath("$[0].periods[4].isLunch").value(true));
+
+        mockMvc.perform(get("/api/v1/settings")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.schedulingCycle.daysInCycle").value(5))
+                .andExpect(jsonPath("$.terminology.class").value("Class"));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
