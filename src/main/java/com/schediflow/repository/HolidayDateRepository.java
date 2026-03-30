@@ -13,4 +13,17 @@ public interface HolidayDateRepository extends JpaRepository<HolidayDate, Long> 
 
     Optional<HolidayDate> findByHolidayCalendarIdAndTenantIdAndDate(
             Long holidayCalendarId, Long tenantId, LocalDate date);
+
+    /**
+     * Tenant-scoped lookup of a single holiday date within a specific calendar.
+     */
+    Optional<HolidayDate> findByIdAndHolidayCalendarIdAndTenantId(
+            Long id, Long holidayCalendarId, Long tenantId);
+
+    /**
+     * Checks for a duplicate date within the same calendar and tenant.
+     * Used to enforce the one-date-per-calendar constraint before insert.
+     */
+    boolean existsByHolidayCalendarIdAndTenantIdAndDate(
+            Long holidayCalendarId, Long tenantId, LocalDate date);
 }
