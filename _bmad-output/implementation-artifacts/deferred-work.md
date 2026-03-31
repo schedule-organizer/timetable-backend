@@ -1,5 +1,11 @@
 # Deferred work
 
+## Deferred from: code review of story 5.res-02.md (2026-04-01)
+
+- **Active subject code uniqueness at service layer only** — Same trade-off as `V012` rooms: no partial unique index because H2 test mode does not support it; concurrent creates could theoretically duplicate active codes until a DB constraint or `DataIntegrityViolation` handling is added.
+- **`class_subject_hours.periods_per_cycle` allows zero** — `CHECK (periods_per_cycle >= 0)` permits `0`; may be tightened when RES-06 defines valid allocations.
+- **`class_subject_hours` tenant vs subject alignment** — There is no constraint that `tenant_id` on `class_subject_hours` matches `subjects.tenant_id` for the referenced `subject_id`; RES-06 should tighten allocation integrity when the feature is built out.
+
 ## Deferred from: code review of 5.res-01.md (2026-04-01)
 
 - **TenantContext.getTenantId() can return null** — TenantFilter silently skips setting context if the `tenantId` claim is absent or non-numeric; all services call getTenantId() without a null guard, resulting in silent empty results rather than an error. Systemic issue; not introduced by RES-01.
