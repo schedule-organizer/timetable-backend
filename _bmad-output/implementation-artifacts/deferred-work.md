@@ -1,5 +1,9 @@
 # Deferred work
 
+## Deferred from: code review of 4.hol-05.md (2026-03-31)
+
+- **Generic constraint name “Holiday slot must be free”** — `UnavailablePeriodPenalty` may apply to non-holiday unavailability later; constraint label could be renamed when that scope expands.
+
 ## Deferred from: code review of 4.hol-04.md (2026-03-31)
 
 - **V010 `source` default for legacy rows** — Rows that existed before `source` was added are stored as `MANUAL` after migration. Historically import-only rows stay `MANUAL` until re-import or a one-time backfill; acceptable unless product requires accurate `IMPORTED` for old data.

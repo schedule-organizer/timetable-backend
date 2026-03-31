@@ -124,6 +124,13 @@
             <artifactId>caffeine</artifactId>
         </dependency>
 
+        <!-- Timefold Solver (SCHED-03 / HOL-05) -->
+        <dependency>
+            <groupId>ai.timefold.solver</groupId>
+            <artifactId>timefold-solver-spring-boot-starter</artifactId>
+            <version>1.16.0</version>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
