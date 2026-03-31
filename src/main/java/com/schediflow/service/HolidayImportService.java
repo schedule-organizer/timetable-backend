@@ -1,6 +1,7 @@
 package com.schediflow.service;
 
 import com.schediflow.domain.HolidayDate;
+import com.schediflow.domain.HolidaySource;
 import com.schediflow.domain.HolidayType;
 import com.schediflow.dto.request.HolidayImportRequest;
 import com.schediflow.dto.response.HolidayImportResponse;
@@ -62,6 +63,7 @@ public class HolidayImportService {
                     row.setName(name);
                     row.setDate(item.date());
                     row.setType(HolidayType.PUBLIC_HOLIDAY);
+                    row.setSource(HolidaySource.IMPORTED);
                     holidayDateRepository.save(row);
                     imported++;
                 } catch (DataIntegrityViolationException ignored) {

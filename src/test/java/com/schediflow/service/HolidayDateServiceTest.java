@@ -2,6 +2,7 @@ package com.schediflow.service;
 
 import com.schediflow.domain.HolidayCalendar;
 import com.schediflow.domain.HolidayDate;
+import com.schediflow.domain.HolidaySource;
 import com.schediflow.domain.HolidayType;
 import com.schediflow.dto.request.HolidayDateRequest;
 import com.schediflow.dto.request.HolidayDateUpdateRequest;
@@ -23,6 +24,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import java.lang.reflect.Field;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -76,11 +78,13 @@ class HolidayDateServiceTest {
         assertThat(resp.date()).isEqualTo(DATE);
         assertThat(resp.name()).isEqualTo("New Year");
         assertThat(resp.type()).isEqualTo(HolidayType.PUBLIC_HOLIDAY);
+        assertThat(resp.source()).isEqualTo(HolidaySource.MANUAL);
 
         ArgumentCaptor<HolidayDate> captor = ArgumentCaptor.forClass(HolidayDate.class);
         verify(holidayDateRepository).save(captor.capture());
         assertThat(captor.getValue().getTenantId()).isEqualTo(TENANT_ID);
         assertThat(captor.getValue().getHolidayCalendarId()).isEqualTo(CALENDAR_ID);
+        assertThat(captor.getValue().getSource()).isEqualTo(HolidaySource.MANUAL);
     }
 
     // ── addDate — error paths ───────────────────────────────────────────────────
@@ -215,6 +219,42 @@ class HolidayDateServiceTest {
         verify(holidayDateRepository, never()).delete(any());
     }
 
+    // ── listByAcademicYear — happy path ────────────────────────────────────────
+
+    @Test
+    void listByAcademicYear_validYear_returnsDatesInAscOrder() {
+        Long academicYearId = 20L;
+        HolidayCalendar cal = calendarWithId(CALENDAR_ID, academicYearId);
+        HolidayDate d1 = dateWithId(1L, CALENDAR_ID, LocalDate.of(2026, 1, 1), "New Year", HolidayType.PUBLIC_HOLIDAY);
+        HolidayDate d2 = dateWithId(2L, CALENDAR_ID, LocalDate.of(2026, 3, 15), "Spring Break", HolidayType.SCHOOL_BREAK);
+
+        when(holidayCalendarRepository.findByAcademicYearIdAndTenantId(academicYearId, TENANT_ID))
+                .thenReturn(Optional.of(cal));
+        when(holidayDateRepository.findByHolidayCalendarIdOrderByDateAsc(CALENDAR_ID))
+                .thenReturn(List.of(d1, d2));
+
+        var result = service.listByAcademicYear(TENANT_ID, academicYearId);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).date()).isEqualTo(LocalDate.of(2026, 1, 1));
+        assertThat(result.get(0).source()).isEqualTo(HolidaySource.MANUAL);
+        assertThat(result.get(1).date()).isEqualTo(LocalDate.of(2026, 3, 15));
+    }
+
+    // ── listByAcademicYear — error paths ───────────────────────────────────────
+
+    @Test
+    void listByAcademicYear_unknownAcademicYear_throwsResourceNotFoundException() {
+        Long academicYearId = 999L;
+        when(holidayCalendarRepository.findByAcademicYearIdAndTenantId(academicYearId, TENANT_ID))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.listByAcademicYear(TENANT_ID, academicYearId))
+                .isInstanceOf(com.schediflow.exception.ResourceNotFoundException.class);
+
+        verify(holidayDateRepository, never()).findByHolidayCalendarIdOrderByDateAsc(any());
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────────────────
 
     private static HolidayDate dateWithId(Long id, Long calendarId, LocalDate date, String name, HolidayType type) {
@@ -225,7 +265,21 @@ class HolidayDateServiceTest {
         d.setDate(date);
         d.setName(name);
         d.setType(type);
+        d.setSource(HolidaySource.MANUAL);
         return d;
+    }
+
+    private static HolidayCalendar calendarWithId(Long id, Long academicYearId) {
+        HolidayCalendar c = new HolidayCalendar();
+        try {
+            Field field = HolidayCalendar.class.getDeclaredField("id");
+            field.setAccessible(true);
+            field.set(c, id);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        c.setAcademicYearId(academicYearId);
+        return c;
     }
 
     private static void setId(HolidayDate d, Long id) {

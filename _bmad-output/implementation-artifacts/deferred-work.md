@@ -1,5 +1,9 @@
 # Deferred work
 
+## Deferred from: code review of 4.hol-04.md (2026-03-31)
+
+- **V010 `source` default for legacy rows** — Rows that existed before `source` was added are stored as `MANUAL` after migration. Historically import-only rows stay `MANUAL` until re-import or a one-time backfill; acceptable unless product requires accurate `IMPORTED` for old data.
+
 ## Deferred from: code review of 4.hol-02.md (2026-03-31)
 
 - **No rate-limiting on `POST /api/v1/holidays/import`** — Any ADMIN or MOD can fan out unlimited Calendarific calls; system-wide rate-limiting gap not introduced by this story.

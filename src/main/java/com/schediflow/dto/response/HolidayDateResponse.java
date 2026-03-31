@@ -1,5 +1,6 @@
 package com.schediflow.dto.response;
 
+import com.schediflow.domain.HolidaySource;
 import com.schediflow.domain.HolidayType;
 
 import java.time.LocalDate;
@@ -11,5 +12,6 @@ public record HolidayDateResponse(
         LocalDate date,
         String name,
         HolidayType type,
+        HolidaySource source,
         OffsetDateTime createdAt
 ) {}

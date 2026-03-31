@@ -1,6 +1,7 @@
 package com.schediflow.service;
 
 import com.schediflow.domain.HolidayDate;
+import com.schediflow.domain.HolidaySource;
 import com.schediflow.dto.request.HolidayDateRequest;
 import com.schediflow.dto.request.HolidayDateUpdateRequest;
 import com.schediflow.dto.response.HolidayDateResponse;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 public class HolidayDateService {
@@ -26,6 +28,15 @@ public class HolidayDateService {
                                HolidayCalendarRepository holidayCalendarRepository) {
         this.holidayDateRepository = holidayDateRepository;
         this.holidayCalendarRepository = holidayCalendarRepository;
+    }
+
+    public List<HolidayDateResponse> listByAcademicYear(Long tenantId, Long academicYearId) {
+        var calendar = holidayCalendarRepository.findByAcademicYearIdAndTenantId(academicYearId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Academic year not found in tenant: " + academicYearId));
+        return holidayDateRepository.findByHolidayCalendarIdOrderByDateAsc(calendar.getId())
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @Transactional
@@ -40,6 +51,7 @@ public class HolidayDateService {
         entity.setDate(req.date());
         entity.setName(req.name());
         entity.setType(req.type());
+        entity.setSource(HolidaySource.MANUAL);
 
         return saveNewDate(entity, req.date());
     }
@@ -119,6 +131,7 @@ public class HolidayDateService {
                 entity.getDate(),
                 entity.getName(),
                 entity.getType(),
+                entity.getSource(),
                 entity.getCreatedAt());
     }
 }

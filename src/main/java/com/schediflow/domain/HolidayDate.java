@@ -34,6 +34,10 @@ public class HolidayDate {
     @Column(nullable = false, length = 30)
     private HolidayType type;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private HolidaySource source;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -58,6 +62,9 @@ public class HolidayDate {
 
     public HolidayType getType() { return type; }
     public void setType(HolidayType type) { this.type = type; }
+
+    public HolidaySource getSource() { return source; }
+    public void setSource(HolidaySource source) { this.source = source; }
 
     public OffsetDateTime getCreatedAt() { return createdAt; }
 }

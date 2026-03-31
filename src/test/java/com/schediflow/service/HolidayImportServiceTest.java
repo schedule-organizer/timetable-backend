@@ -2,6 +2,7 @@ package com.schediflow.service;
 
 import com.schediflow.domain.HolidayCalendar;
 import com.schediflow.domain.HolidayDate;
+import com.schediflow.domain.HolidaySource;
 import com.schediflow.domain.HolidayType;
 import com.schediflow.dto.request.HolidayImportRequest;
 import com.schediflow.dto.response.HolidayImportResponse;
@@ -68,7 +69,10 @@ class HolidayImportServiceTest {
         assertThat(r.imported()).isEqualTo(2);
         assertThat(r.updated()).isZero();
         assertThat(r.skipped()).isZero();
-        verify(holidayDateRepository, times(2)).save(any(HolidayDate.class));
+
+        ArgumentCaptor<HolidayDate> cap = ArgumentCaptor.forClass(HolidayDate.class);
+        verify(holidayDateRepository, times(2)).save(cap.capture());
+        assertThat(cap.getAllValues()).allMatch(d -> HolidaySource.IMPORTED.equals(d.getSource()));
     }
 
     @Test

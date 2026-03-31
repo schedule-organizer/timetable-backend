@@ -11,6 +11,8 @@ public interface HolidayDateRepository extends JpaRepository<HolidayDate, Long> 
 
     List<HolidayDate> findByHolidayCalendarId(Long holidayCalendarId);
 
+    List<HolidayDate> findByHolidayCalendarIdOrderByDateAsc(Long holidayCalendarId);
+
     Optional<HolidayDate> findByHolidayCalendarIdAndTenantIdAndDate(
             Long holidayCalendarId, Long tenantId, LocalDate date);
 

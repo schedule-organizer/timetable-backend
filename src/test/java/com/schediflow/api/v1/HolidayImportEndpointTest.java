@@ -37,6 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class HolidayImportEndpointTest {
 
     private static final String IMPORT_URL = "/api/v1/holidays/import";
+    private static final String HOL_URL = "/api/v1/holidays";
     private static final String CAL_URL = "/api/v1/holiday-calendars";
     private static final String YEARS_URL = "/api/v1/academic-years";
     private static final String PASSWORD = "Password1";
@@ -270,6 +271,115 @@ class HolidayImportEndpointTest {
                                 "calendarId", calendarId,
                                 "country", "US",
                                 "year", 2026))))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ── GET /api/v1/holidays?academicYearId=... ─────────────────────────────────
+
+    @Test
+    void getHolidays_importedDates_returns200WithSourceImported() throws Exception {
+        mockMvc.perform(post(IMPORT_URL)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "calendarId", calendarId,
+                                "country", "US",
+                                "year", 2026))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get(HOL_URL)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("academicYearId", String.valueOf(academicYearId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].source").value("IMPORTED"))
+                .andExpect(jsonPath("$[1].source").value("IMPORTED"));
+    }
+
+    @Test
+    void getHolidays_manualDate_returnsWithSourceManual() throws Exception {
+        mockMvc.perform(post("/api/v1/holidays/" + calendarId + "/dates")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "date", "2026-05-01",
+                                "name", "Labour Day",
+                                "type", "PUBLIC_HOLIDAY"))))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get(HOL_URL)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("academicYearId", String.valueOf(academicYearId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].source").value("MANUAL"))
+                .andExpect(jsonPath("$[0].name").value("Labour Day"));
+    }
+
+    @Test
+    void getHolidays_sortedByDateAscending() throws Exception {
+        // Import two dates (Jan 1 and Jul 4) and add one manual date (May 1)
+        mockMvc.perform(post(IMPORT_URL)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "calendarId", calendarId,
+                                "country", "US",
+                                "year", 2026))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/holidays/" + calendarId + "/dates")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "date", "2026-05-01",
+                                "name", "Labour Day",
+                                "type", "PUBLIC_HOLIDAY"))))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get(HOL_URL)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("academicYearId", String.valueOf(academicYearId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].date").value("2026-01-01"))
+                .andExpect(jsonPath("$[0].source").value("IMPORTED"))
+                .andExpect(jsonPath("$[1].date").value("2026-05-01"))
+                .andExpect(jsonPath("$[1].source").value("MANUAL"))
+                .andExpect(jsonPath("$[2].date").value("2026-07-04"))
+                .andExpect(jsonPath("$[2].source").value("IMPORTED"));
+    }
+
+    @Test
+    void getHolidays_unknownAcademicYear_returns404() throws Exception {
+        mockMvc.perform(get(HOL_URL)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("academicYearId", "99999"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getHolidays_asTeacher_returns200() throws Exception {
+        mockMvc.perform(get(HOL_URL)
+                        .header("Authorization", "Bearer " + teacherToken)
+                        .param("academicYearId", String.valueOf(academicYearId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    void getHolidays_asMod_returns200() throws Exception {
+        mockMvc.perform(get(HOL_URL)
+                        .header("Authorization", "Bearer " + modToken)
+                        .param("academicYearId", String.valueOf(academicYearId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    void getHolidays_withoutJwt_returns401() throws Exception {
+        mockMvc.perform(get(HOL_URL)
+                        .param("academicYearId", String.valueOf(academicYearId)))
                 .andExpect(status().isUnauthorized());
     }
 

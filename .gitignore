@@ -52,11 +52,11 @@ venv/
 # Java / JVM
 *.class
 *.jar
+!.mvn/wrapper/maven-wrapper.jar
 *.war
 *.ear
 .gradle/
 target/
-.mvn/wrapper/
 
 # Editor and IDE metadata
 .idea/
