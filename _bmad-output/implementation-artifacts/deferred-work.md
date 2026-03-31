@@ -1,5 +1,13 @@
 # Deferred work
 
+## Deferred from: code review of 5.res-01.md (2026-04-01)
+
+- **TenantContext.getTenantId() can return null** — TenantFilter silently skips setting context if the `tenantId` claim is absent or non-numeric; all services call getTenantId() without a null guard, resulting in silent empty results rather than an error. Systemic issue; not introduced by RES-01.
+- **equipmentTags has no @Size bound** — No constraint on list length or individual element length; arbitrarily large payloads accepted and stored. Revisit when input limits are standardised across all DTOs.
+- **@Transactional(readOnly=true) missing on list() and getById()** — Read methods run without a readOnly transaction hint; minor performance/correctness gap consistent with other services in the project.
+- **Soft delete doesn't check lesson references** — Spec notes "rooms referenced by lessons cannot be hard deleted"; no Lesson entity exists yet. Wire referential guard when Lesson CRUD is implemented (Epic 6).
+- **Inactive room name reuse could complicate future reactivation** — By design, soft-deleted room names can be reused immediately. If reactivation is ever added, two active rooms with the same name would exist without triggering the conflict check. Revisit if reactivation is scoped.
+
 ## Deferred from: code review of 4.hol-05.md (2026-03-31)
 
 - **Generic constraint name “Holiday slot must be free”** — `UnavailablePeriodPenalty` may apply to non-holiday unavailability later; constraint label could be renamed when that scope expands.

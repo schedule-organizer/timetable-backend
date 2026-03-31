@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-29
-last_updated: 2026-03-31 # HOL-05 done
+last_updated: 2026-04-01 # RES-01 done
 project: timetable-backend
 project_key: NOKEY
 tracking_system: file-system
@@ -91,7 +91,7 @@ development_status:
 
   # ─── Epic 5: Resource Management ────────────────────────────────────────────
   epic-5: in-progress
-  5-res-01: ready-for-dev
+  5-res-01: done
   5-res-02: ready-for-dev
   5-res-03: ready-for-dev
   5-res-04: ready-for-dev
