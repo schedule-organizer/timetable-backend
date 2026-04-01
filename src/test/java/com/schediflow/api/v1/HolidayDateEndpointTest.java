@@ -111,7 +111,8 @@ class HolidayDateEndpointTest {
                 .andExpect(jsonPath("$.calendarId").value(calendarId))
                 .andExpect(jsonPath("$.date").value("2026-01-01"))
                 .andExpect(jsonPath("$.name").value("New Year"))
-                .andExpect(jsonPath("$.type").value("PUBLIC_HOLIDAY"));
+                .andExpect(jsonPath("$.type").value("PUBLIC_HOLIDAY"))
+                .andExpect(jsonPath("$.lessonConflicts").isArray());
     }
 
     @Test

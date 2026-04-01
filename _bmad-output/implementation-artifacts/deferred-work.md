@@ -1,5 +1,9 @@
 # Deferred work
 
+## Deferred from: code review of 4.hol-07 + 5.res-03 (2026-04-01)
+
+- **Per-date holiday import conflict queries** — `HolidayImportService` calls `findPublishedLessonHolidayConflicts` once per distinct newly inserted date. Fine for normal feed sizes; consolidate if volume or latency becomes an issue.
+
 ## Deferred from: code review of story 5.res-02.md (2026-04-01)
 
 - **Active subject code uniqueness at service layer only** — Same trade-off as `V012` rooms: no partial unique index because H2 test mode does not support it; concurrent creates could theoretically duplicate active codes until a DB constraint or `DataIntegrityViolation` handling is added.

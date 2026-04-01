@@ -6,4 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface ClassSubjectHourRepository extends JpaRepository<ClassSubjectHour, Long> {
 
     boolean existsBySubjectId(Long subjectId);
+
+    boolean existsByClassId(Long classId);
 }

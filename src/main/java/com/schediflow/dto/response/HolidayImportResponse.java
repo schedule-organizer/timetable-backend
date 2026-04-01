@@ -1,4 +1,10 @@
 package com.schediflow.dto.response;
 
-public record HolidayImportResponse(int imported, int updated, int skipped) {
-}
+import java.util.List;
+
+public record HolidayImportResponse(
+        int imported,
+        int updated,
+        int skipped,
+        List<HolidayLessonConflictResponse> lessonConflicts
+) {}

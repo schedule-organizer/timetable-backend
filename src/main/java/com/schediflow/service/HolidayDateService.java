@@ -4,6 +4,7 @@ import com.schediflow.domain.HolidayDate;
 import com.schediflow.domain.HolidaySource;
 import com.schediflow.dto.request.HolidayDateRequest;
 import com.schediflow.dto.request.HolidayDateUpdateRequest;
+import com.schediflow.dto.response.HolidayLessonConflictResponse;
 import com.schediflow.dto.response.HolidayDateResponse;
 import com.schediflow.exception.BadRequestException;
 import com.schediflow.exception.ResourceNotFoundException;
@@ -23,11 +24,15 @@ public class HolidayDateService {
 
     private final HolidayDateRepository holidayDateRepository;
     private final HolidayCalendarRepository holidayCalendarRepository;
+    private final ConflictDetectionService conflictDetectionService;
 
-    public HolidayDateService(HolidayDateRepository holidayDateRepository,
-                               HolidayCalendarRepository holidayCalendarRepository) {
+    public HolidayDateService(
+            HolidayDateRepository holidayDateRepository,
+            HolidayCalendarRepository holidayCalendarRepository,
+            ConflictDetectionService conflictDetectionService) {
         this.holidayDateRepository = holidayDateRepository;
         this.holidayCalendarRepository = holidayCalendarRepository;
+        this.conflictDetectionService = conflictDetectionService;
     }
 
     public List<HolidayDateResponse> listByAcademicYear(Long tenantId, Long academicYearId) {
@@ -35,14 +40,15 @@ public class HolidayDateService {
                 .orElseThrow(() -> new ResourceNotFoundException("Academic year not found in tenant: " + academicYearId));
         return holidayDateRepository.findByHolidayCalendarIdOrderByDateAsc(calendar.getId())
                 .stream()
-                .map(this::toResponse)
+                .map(d -> toResponse(d, List.of()))
                 .toList();
     }
 
     @Transactional
     public HolidayDateResponse addDate(Long calendarId, HolidayDateRequest req) {
         Long tenantId = TenantContext.getTenantId();
-        assertCalendarExists(calendarId, tenantId);
+        var calendar = holidayCalendarRepository.findByIdAndTenantId(calendarId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Holiday calendar not found: " + calendarId));
         assertDateNotDuplicate(calendarId, tenantId, req);
 
         HolidayDate entity = new HolidayDate();
@@ -53,7 +59,7 @@ public class HolidayDateService {
         entity.setType(req.type());
         entity.setSource(HolidaySource.MANUAL);
 
-        return saveNewDate(entity, req.date());
+        return saveNewDate(entity, req.date(), calendar.getAcademicYearId());
     }
 
     @Transactional
@@ -65,7 +71,7 @@ public class HolidayDateService {
         entity.setName(req.name());
         entity.setType(req.type());
 
-        return toResponse(holidayDateRepository.save(entity));
+        return toResponse(holidayDateRepository.save(entity), List.of());
     }
 
     @Transactional
@@ -87,9 +93,13 @@ public class HolidayDateService {
         }
     }
 
-    private HolidayDateResponse saveNewDate(HolidayDate entity, LocalDate date) {
+    private HolidayDateResponse saveNewDate(HolidayDate entity, LocalDate date, Long academicYearId) {
         try {
-            return toResponse(holidayDateRepository.save(entity));
+            HolidayDate saved = holidayDateRepository.save(entity);
+            List<HolidayLessonConflictResponse> conflicts =
+                    conflictDetectionService.findPublishedLessonHolidayConflicts(
+                            TenantContext.getTenantId(), academicYearId, date);
+            return toResponse(saved, conflicts);
         } catch (DataIntegrityViolationException ex) {
             if (isHolidayDateUniqueConstraintViolation(ex)) {
                 throw duplicateDateBadRequest(date);
@@ -124,7 +134,7 @@ public class HolidayDateService {
                 .orElseThrow(() -> new ResourceNotFoundException("Holiday date not found: " + dateId));
     }
 
-    private HolidayDateResponse toResponse(HolidayDate entity) {
+    private HolidayDateResponse toResponse(HolidayDate entity, List<HolidayLessonConflictResponse> lessonConflicts) {
         return new HolidayDateResponse(
                 entity.getId(),
                 entity.getHolidayCalendarId(),
@@ -132,6 +142,7 @@ public class HolidayDateService {
                 entity.getName(),
                 entity.getType(),
                 entity.getSource(),
-                entity.getCreatedAt());
+                entity.getCreatedAt(),
+                lessonConflicts);
     }
 }

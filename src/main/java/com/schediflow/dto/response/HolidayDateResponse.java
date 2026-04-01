@@ -5,6 +5,7 @@ import com.schediflow.domain.HolidayType;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 public record HolidayDateResponse(
         Long id,
@@ -13,5 +14,6 @@ public record HolidayDateResponse(
         String name,
         HolidayType type,
         HolidaySource source,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        List<HolidayLessonConflictResponse> lessonConflicts
 ) {}
