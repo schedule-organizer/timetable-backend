@@ -46,7 +46,7 @@ class HolidayImportServiceTest {
     void setUp() {
         service = new HolidayImportService(
                 holidayFeedClient, holidayCalendarRepository, holidayDateRepository, conflictDetectionService);
-        when(conflictDetectionService.findPublishedLessonHolidayConflicts(anyLong(), anyLong(), any()))
+        lenient().when(conflictDetectionService.findPublishedLessonHolidayConflicts(anyLong(), anyLong(), any()))
                 .thenReturn(List.of());
     }
 

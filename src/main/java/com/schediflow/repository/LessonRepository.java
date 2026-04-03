@@ -13,6 +13,8 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
 
     boolean existsByClassIdAndTenantId(Long classId, Long tenantId);
 
+    boolean existsByTeacherUserIdAndTenantId(Long teacherUserId, Long tenantId);
+
     @Query("""
             SELECT new com.schediflow.dto.response.HolidayLessonConflictResponse(
                 l.id, s.name, COALESCE(u.displayName, u.email), sc.name, :holidayDate)

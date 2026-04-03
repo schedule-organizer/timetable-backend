@@ -1,5 +1,9 @@
 # Deferred work
 
+## Deferred from: code review of story 5.res-04.md (2026-04-02)
+
+- **`lenient()` on `HolidayImportServiceTest` conflict stub** — Shared `@BeforeEach` stub marked lenient so early-return tests do not fail on unnecessary stubbing; slightly weaker Mockito strictness for that class.
+
 ## Deferred from: code review of 4.hol-07 + 5.res-03 (2026-04-01)
 
 - **Per-date holiday import conflict queries** — `HolidayImportService` calls `findPublishedLessonHolidayConflicts` once per distinct newly inserted date. Fine for normal feed sizes; consolidate if volume or latency becomes an issue.
