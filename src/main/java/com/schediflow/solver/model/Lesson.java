@@ -13,6 +13,11 @@ public class Lesson {
     @PlanningId
     private Long id;
 
+    /** When set with {@link #subjectId}, the solver requires a matching {@link TeacherSubjectQualification} fact. */
+    private Long teacherUserId;
+
+    private Long subjectId;
+
     @PlanningVariable(valueRangeProviderRefs = "timeslotRange")
     private PeriodSlot periodSlot;
 
@@ -38,5 +43,21 @@ public class Lesson {
 
     public void setPeriodSlot(PeriodSlot periodSlot) {
         this.periodSlot = periodSlot;
+    }
+
+    public Long getTeacherUserId() {
+        return teacherUserId;
+    }
+
+    public void setTeacherUserId(Long teacherUserId) {
+        this.teacherUserId = teacherUserId;
+    }
+
+    public Long getSubjectId() {
+        return subjectId;
+    }
+
+    public void setSubjectId(Long subjectId) {
+        this.subjectId = subjectId;
     }
 }

@@ -1,5 +1,9 @@
 # Deferred work
 
+## Deferred from: code review of story 5.res-05.md (2026-04-04)
+
+- **Populate `TeacherSubjectQualification` when assembling `TimetableSolution`** — Constraint and solver tests are in place; no production path builds the solution yet. When timetabling is integrated, map persisted `teacher_qualifications` (via teacher `user_id` + `subject_id`) into `teacherSubjectQualifications` so the solver enforces the same rules as the API.
+
 ## Deferred from: code review of story 5.res-04.md (2026-04-02)
 
 - **`lenient()` on `HolidayImportServiceTest` conflict stub** — Shared `@BeforeEach` stub marked lenient so early-return tests do not fail on unnecessary stubbing; slightly weaker Mockito strictness for that class.
