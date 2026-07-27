@@ -4,8 +4,7 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.Filter;
 
 /**
- * Class × subject allocation (periods per cycle). Minimal schema for RES-02 delete guard;
- * RES-06 adds API and further constraints.
+ * Class × subject allocation: periods per cycle and spread pattern for the solver.
  */
 @Entity
 @Table(name = "class_subject_hours")
@@ -28,7 +27,7 @@ public class ClassSubjectHour {
     @Column(name = "periods_per_cycle", nullable = false)
     private int periodsPerCycle = 1;
 
-    @Column(name = "spread_pattern", length = 50)
+    @Column(name = "spread_pattern", nullable = false, length = 50)
     private String spreadPattern;
 
     public Long getId() {

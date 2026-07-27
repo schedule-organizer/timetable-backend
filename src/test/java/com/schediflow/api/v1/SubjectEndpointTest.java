@@ -36,6 +36,7 @@ class SubjectEndpointTest {
     @SpyBean EmailService emailService;
 
     private static final String SUBJECTS_URL = "/api/v1/subjects";
+    private static final String CLASSES_URL = "/api/v1/classes";
     private static final String PASSWORD = "Password1";
 
     private String adminToken;
@@ -167,12 +168,13 @@ class SubjectEndpointTest {
     @Test
     void delete_whenClassSubjectHoursExist_returns409() throws Exception {
         long subjectId = createSubject("Math", "MAT", "#AA00FF");
+        long classId = createClass("Guard Class");
         Long tenantId = jdbcTemplate.queryForObject(
                 "SELECT tenant_id FROM subjects WHERE id = ?", Long.class, subjectId);
         jdbcTemplate.update(
                 "INSERT INTO class_subject_hours (tenant_id, class_id, subject_id, periods_per_cycle) VALUES (?, ?, ?, ?)",
                 tenantId,
-                1L,
+                classId,
                 subjectId,
                 1);
 
@@ -203,6 +205,16 @@ class SubjectEndpointTest {
                 "requiredRoomType", "CLASSROOM",
                 "maxPerDay", 2,
                 "spreadPattern", "SPREAD");
+    }
+
+    private long createClass(String name) throws Exception {
+        MvcResult r = mockMvc.perform(post(CLASSES_URL)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("name", name, "yearLevel", 7))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return objectMapper.readTree(r.getResponse().getContentAsString()).get("id").asLong();
     }
 
     private long createSubject(String name, String code, String color) throws Exception {

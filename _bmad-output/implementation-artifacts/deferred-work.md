@@ -1,5 +1,10 @@
 # Deferred work
 
+## Deferred from: code review of story 5.res-06.md (2026-04-04)
+
+- **`class_subject_hours.periods_per_cycle` allows zero at DB** — V013 `CHECK (periods_per_cycle >= 0)`; RES-06 API uses `@Positive`. Tighten the DB constraint when convenient for consistency with RES-02 deferred note.
+- **Tenant alignment on `class_subject_hours` vs `school_classes`** — FK on `class_id` only; no composite constraint that `tenant_id` matches the parent class row. Service uses `TenantContext`; optional hardening via schema later.
+
 ## Deferred from: code review of story 5.res-05.md (2026-04-04)
 
 - **Populate `TeacherSubjectQualification` when assembling `TimetableSolution`** — Constraint and solver tests are in place; no production path builds the solution yet. When timetabling is integrated, map persisted `teacher_qualifications` (via teacher `user_id` + `subject_id`) into `teacherSubjectQualifications` so the solver enforces the same rules as the API.
