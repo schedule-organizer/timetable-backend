@@ -18,6 +18,9 @@ public class Lesson {
 
     private Long subjectId;
 
+    /** When set, lessons of groups sharing an {@link OptionBlockMembership} must land on the same slot. */
+    private Long teachingGroupId;
+
     @PlanningVariable(valueRangeProviderRefs = "timeslotRange")
     private PeriodSlot periodSlot;
 
@@ -59,5 +62,13 @@ public class Lesson {
 
     public void setSubjectId(Long subjectId) {
         this.subjectId = subjectId;
+    }
+
+    public Long getTeachingGroupId() {
+        return teachingGroupId;
+    }
+
+    public void setTeachingGroupId(Long teachingGroupId) {
+        this.teachingGroupId = teachingGroupId;
     }
 }

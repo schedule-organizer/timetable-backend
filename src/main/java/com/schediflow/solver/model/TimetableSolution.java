@@ -21,6 +21,7 @@ public class TimetableSolution {
     private List<PeriodSlot> timeslotRange = new ArrayList<>();
     private List<UnavailablePeriodPenalty> holidayPenalties = new ArrayList<>();
     private List<TeacherSubjectQualification> teacherSubjectQualifications = new ArrayList<>();
+    private List<OptionBlockMembership> optionBlockMemberships = new ArrayList<>();
     private HardSoftScore score;
 
     @PlanningEntityCollectionProperty
@@ -57,6 +58,15 @@ public class TimetableSolution {
 
     public void setTeacherSubjectQualifications(List<TeacherSubjectQualification> teacherSubjectQualifications) {
         this.teacherSubjectQualifications = teacherSubjectQualifications;
+    }
+
+    @ProblemFactCollectionProperty
+    public List<OptionBlockMembership> getOptionBlockMemberships() {
+        return optionBlockMemberships;
+    }
+
+    public void setOptionBlockMemberships(List<OptionBlockMembership> optionBlockMemberships) {
+        this.optionBlockMemberships = optionBlockMemberships;
     }
 
     @PlanningScore
