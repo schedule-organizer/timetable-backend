@@ -1,0 +1,16 @@
+package com.schediflow.dto.request;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
+import java.util.List;
+
+public record TeachingGroupRequest(
+        @NotBlank @Size(max = 200) String name,
+        @NotBlank String type,
+        @NotNull Long teacherId,
+        @NotNull Long subjectId,
+        @NotEmpty List<Long> classIds
+) {}
