@@ -37,12 +37,15 @@ public interface CoverAssignmentRepository extends JpaRepository<CoverAssignment
             @Param("schedulePeriodId") Long schedulePeriodId,
             @Param("excludeLessonId") Long excludeLessonId);
 
-    /** Lesson counts per cover teacher, used for workload in COVER-02. */
+    /** Lessons covered per teacher within one timetable, used for workload in COVER-02. */
     @Query("""
             select ca.coverTeacherId, count(ca)
-            from CoverAssignment ca
+            from CoverAssignment ca, Lesson l
             where ca.tenantId = :tenantId
+              and ca.lessonId = l.id
+              and l.timetableId = :timetableId
             group by ca.coverTeacherId
             """)
-    List<Object[]> countPerCoverTeacher(@Param("tenantId") Long tenantId);
+    List<Object[]> countPerCoverTeacherInTimetable(
+            @Param("tenantId") Long tenantId, @Param("timetableId") Long timetableId);
 }

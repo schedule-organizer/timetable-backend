@@ -36,14 +36,16 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
             @Param("schedulePeriodId") Long schedulePeriodId,
             @Param("excludeLessonId") Long excludeLessonId);
 
-    /** Lesson counts per teaching user, used for workload in COVER-02. */
+    /** Lessons taught per user within one timetable, used for workload in COVER-02. */
     @Query("""
             select l.teacherUserId, count(l)
             from Lesson l
             where l.tenantId = :tenantId
+              and l.timetableId = :timetableId
             group by l.teacherUserId
             """)
-    List<Object[]> countPerTeacherUser(@Param("tenantId") Long tenantId);
+    List<Object[]> countPerTeacherUserInTimetable(
+            @Param("tenantId") Long tenantId, @Param("timetableId") Long timetableId);
 
     @Query("""
             SELECT new com.schediflow.dto.response.HolidayLessonConflictResponse(
