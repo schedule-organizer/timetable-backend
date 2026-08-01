@@ -109,6 +109,10 @@ class ClassSubjectHourServiceTest {
     void replace_duplicateSubject_throws() {
         when(schoolClassRepository.findByIdAndTenantIdAndActive(CLASS_ID, TENANT_ID, true))
                 .thenReturn(Optional.of(new SchoolClass()));
+        // The first item must resolve, otherwise validation fails on the lookup before the
+        // duplicate check on the second item is ever reached.
+        when(subjectRepository.findByIdAndTenantIdAndActive(SUBJECT_A, TENANT_ID, true))
+                .thenReturn(Optional.of(new Subject()));
         var req =
                 new ClassSubjectHoursReplaceRequest(
                         List.of(

@@ -14,6 +14,8 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
 
     List<Room> findByTenantIdAndActiveOrderByNameAsc(Long tenantId, boolean active);
 
+    Optional<Room> findByNameAndTenantIdAndActive(String name, Long tenantId, boolean active);
+
     boolean existsByNameAndTenantIdAndActive(String name, Long tenantId, boolean active);
 
     boolean existsByNameAndTenantIdAndActiveAndIdNot(String name, Long tenantId, boolean active, Long id);

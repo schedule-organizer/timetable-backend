@@ -1,5 +1,14 @@
 # Deferred work
 
+## Deferred from: implementation of Epic 5 RES-07…RES-11 (2026-08-01)
+
+- **FR34 has no write path for teacher preferences** — RES-10 reads `teacher_preferences`, and V022 creates the table, but no story defines an endpoint for creating or updating preferences, so they can only be set with direct SQL. Already flagged as a gap in the 2026-03-29 implementation-readiness report. Needs a follow-up story before the availability view is usable in production.
+- **Solver does not yet consume forbidden slots** — `ForbiddenSlotService.findAllForSolver` exposes the rows, but the solver's `UnavailablePeriodPenalty` fact is keyed on a period slot with no entity, and the solver `Lesson` has no room or class reference. Entity-scoped hard unavailability cannot be expressed until SCHED-02/03 fills out the planning model.
+- **`Lesson.teachingGroupId` is never populated** — added by RES-08 for the "Option block groups must share a period" constraint. SCHED-02/03 must set it when building `TimetableSolution` from persisted rows, otherwise the constraint stays inert on real data.
+- **Teaching groups have no lesson-assignment guard on delete** — RES-07's AC says groups with lesson assignments cannot be hard deleted. It is satisfied by never hard deleting, but once `lessons` gains a `teaching_group_id` column (SCHED-02/03) consider whether deactivation should also be blocked or warn.
+- **Endpoint-test auth boilerplate copied again** — `createModUser` / `inviteAndComplete` / `loginAndGetToken` are duplicated into `TeachingGroupEndpointTest`, `OptionBlockEndpointTest`, `ForbiddenSlotEndpointTest`, `TeacherAvailabilityEndpointTest` and `CsvImportEndpointTest`. Extends the same duplication already noted for CONFIG-10; a shared base fixture would now pay for itself.
+- **CSV import has no rate limiting** — `POST /api/v1/import/{entityType}` accepts up to 1000 rows per call with no per-tenant throttle. Same system-wide gap noted for the holiday import endpoint.
+
 ## Deferred from: code review of story 5.res-06.md (2026-04-04)
 
 - **`class_subject_hours.periods_per_cycle` allows zero at DB** — V013 `CHECK (periods_per_cycle >= 0)`; RES-06 API uses `@Positive`. Tighten the DB constraint when convenient for consistency with RES-02 deferred note.

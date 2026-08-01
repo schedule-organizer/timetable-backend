@@ -12,6 +12,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import java.util.List;
 import java.util.Map;
@@ -30,6 +33,20 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleMissingParam(MissingServletRequestParameterException ex) {
         return ResponseEntity.badRequest()
                 .body(ErrorResponse.of(400, "BAD_REQUEST", ex.getMessage(), null));
+    }
+
+    /** Multipart upload larger than the configured limit (bulk CSV import). */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleUploadTooLarge(MaxUploadSizeExceededException ex) {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(400, "BAD_REQUEST", "Uploaded file exceeds the maximum allowed size", null));
+    }
+
+    /** Multipart request missing its file part, or otherwise malformed. */
+    @ExceptionHandler({MissingServletRequestPartException.class, MultipartException.class})
+    public ResponseEntity<ErrorResponse> handleMultipart(Exception ex) {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(400, "BAD_REQUEST", "Malformed multipart request: " + ex.getMessage(), null));
     }
 
     /** Bean Validation failures — includes field-level details. */

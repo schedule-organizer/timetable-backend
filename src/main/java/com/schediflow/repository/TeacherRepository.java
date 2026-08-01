@@ -12,6 +12,8 @@ public interface TeacherRepository extends JpaRepository<Teacher, Long> {
 
     Optional<Teacher> findByIdAndTenantIdAndActive(Long id, Long tenantId, boolean active);
 
+    Optional<Teacher> findByUserIdAndTenantId(Long userId, Long tenantId);
+
     boolean existsByUserIdAndTenantId(Long userId, Long tenantId);
 
     boolean existsByUserIdAndTenantIdAndIdNot(Long userId, Long tenantId, Long id);

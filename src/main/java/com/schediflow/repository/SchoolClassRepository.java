@@ -12,6 +12,8 @@ public interface SchoolClassRepository extends JpaRepository<SchoolClass, Long> 
 
     List<SchoolClass> findByTenantIdAndActiveOrderByNameAsc(Long tenantId, boolean active);
 
+    Optional<SchoolClass> findByNameAndTenantIdAndActive(String name, Long tenantId, boolean active);
+
     boolean existsByNameAndTenantIdAndActive(String name, Long tenantId, boolean active);
 
     boolean existsByNameAndTenantIdAndActiveAndIdNot(String name, Long tenantId, boolean active, Long id);
