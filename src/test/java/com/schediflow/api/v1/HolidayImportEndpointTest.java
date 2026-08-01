@@ -109,7 +109,8 @@ class HolidayImportEndpointTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.imported").value(2))
                 .andExpect(jsonPath("$.updated").value(0))
-                .andExpect(jsonPath("$.skipped").value(0));
+                .andExpect(jsonPath("$.skipped").value(0))
+                .andExpect(jsonPath("$.lessonConflicts").isArray());
 
         verify(holidayFeedClient).fetchPublicHolidays("US", 2026, null);
     }
@@ -124,7 +125,8 @@ class HolidayImportEndpointTest {
                                 "country", "US",
                                 "year", 2026))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.imported").value(2));
+                .andExpect(jsonPath("$.imported").value(2))
+                .andExpect(jsonPath("$.lessonConflicts").isArray());
 
         mockMvc.perform(post(IMPORT_URL)
                         .header("Authorization", "Bearer " + adminToken)
@@ -135,7 +137,8 @@ class HolidayImportEndpointTest {
                                 "year", 2026))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.imported").value(0))
-                .andExpect(jsonPath("$.skipped").value(2));
+                .andExpect(jsonPath("$.skipped").value(2))
+                .andExpect(jsonPath("$.lessonConflicts").isArray());
     }
 
     @Test

@@ -11,7 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Minimal planning solution for Timefold: lessons choose period slots; holidays are hard forbidden via facts.
+ * Minimal planning solution for Timefold: lessons choose period slots; holidays and teacher–subject qualifications are
+ * enforced via problem facts.
  */
 @PlanningSolution
 public class TimetableSolution {
@@ -19,6 +20,8 @@ public class TimetableSolution {
     private List<Lesson> lessons = new ArrayList<>();
     private List<PeriodSlot> timeslotRange = new ArrayList<>();
     private List<UnavailablePeriodPenalty> holidayPenalties = new ArrayList<>();
+    private List<TeacherSubjectQualification> teacherSubjectQualifications = new ArrayList<>();
+    private List<OptionBlockMembership> optionBlockMemberships = new ArrayList<>();
     private HardSoftScore score;
 
     @PlanningEntityCollectionProperty
@@ -46,6 +49,24 @@ public class TimetableSolution {
 
     public void setHolidayPenalties(List<UnavailablePeriodPenalty> holidayPenalties) {
         this.holidayPenalties = holidayPenalties;
+    }
+
+    @ProblemFactCollectionProperty
+    public List<TeacherSubjectQualification> getTeacherSubjectQualifications() {
+        return teacherSubjectQualifications;
+    }
+
+    public void setTeacherSubjectQualifications(List<TeacherSubjectQualification> teacherSubjectQualifications) {
+        this.teacherSubjectQualifications = teacherSubjectQualifications;
+    }
+
+    @ProblemFactCollectionProperty
+    public List<OptionBlockMembership> getOptionBlockMemberships() {
+        return optionBlockMemberships;
+    }
+
+    public void setOptionBlockMemberships(List<OptionBlockMembership> optionBlockMemberships) {
+        this.optionBlockMemberships = optionBlockMemberships;
     }
 
     @PlanningScore

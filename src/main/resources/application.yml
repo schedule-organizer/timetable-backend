@@ -15,6 +15,12 @@ spring:
     serialization:
       write-dates-as-timestamps: false
 
+  # Bulk CSV import (RES-11) accepts files up to 5 MB; the service rejects anything larger itself.
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   jpa:
     hibernate:
       ddl-auto: none   # Flyway owns schema management

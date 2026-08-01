@@ -37,6 +37,7 @@ class HolidayDateServiceTest {
 
     @Mock HolidayDateRepository holidayDateRepository;
     @Mock HolidayCalendarRepository holidayCalendarRepository;
+    @Mock ConflictDetectionService conflictDetectionService;
 
     HolidayDateService service;
 
@@ -48,7 +49,7 @@ class HolidayDateServiceTest {
     @BeforeEach
     void setUp() {
         TenantContext.setTenantId(TENANT_ID);
-        service = new HolidayDateService(holidayDateRepository, holidayCalendarRepository);
+        service = new HolidayDateService(holidayDateRepository, holidayCalendarRepository, conflictDetectionService);
     }
 
     @AfterEach
@@ -60,8 +61,11 @@ class HolidayDateServiceTest {
 
     @Test
     void addDate_validRequest_savesAndReturnsResponse() {
+        Long academicYearId = 20L;
+        HolidayCalendar cal = new HolidayCalendar();
+        cal.setAcademicYearId(academicYearId);
         when(holidayCalendarRepository.findByIdAndTenantId(CALENDAR_ID, TENANT_ID))
-                .thenReturn(Optional.of(new HolidayCalendar()));
+                .thenReturn(Optional.of(cal));
         when(holidayDateRepository.existsByHolidayCalendarIdAndTenantIdAndDate(CALENDAR_ID, TENANT_ID, DATE))
                 .thenReturn(false);
         when(holidayDateRepository.save(any(HolidayDate.class))).thenAnswer(inv -> {
@@ -69,6 +73,8 @@ class HolidayDateServiceTest {
             setId(d, DATE_ID);
             return d;
         });
+        when(conflictDetectionService.findPublishedLessonHolidayConflicts(TENANT_ID, academicYearId, DATE))
+                .thenReturn(List.of());
 
         HolidayDateRequest req = new HolidayDateRequest(DATE, "New Year", HolidayType.PUBLIC_HOLIDAY);
         HolidayDateResponse resp = service.addDate(CALENDAR_ID, req);
@@ -79,12 +85,14 @@ class HolidayDateServiceTest {
         assertThat(resp.name()).isEqualTo("New Year");
         assertThat(resp.type()).isEqualTo(HolidayType.PUBLIC_HOLIDAY);
         assertThat(resp.source()).isEqualTo(HolidaySource.MANUAL);
+        assertThat(resp.lessonConflicts()).isEmpty();
 
         ArgumentCaptor<HolidayDate> captor = ArgumentCaptor.forClass(HolidayDate.class);
         verify(holidayDateRepository).save(captor.capture());
         assertThat(captor.getValue().getTenantId()).isEqualTo(TENANT_ID);
         assertThat(captor.getValue().getHolidayCalendarId()).isEqualTo(CALENDAR_ID);
         assertThat(captor.getValue().getSource()).isEqualTo(HolidaySource.MANUAL);
+        verify(conflictDetectionService).findPublishedLessonHolidayConflicts(TENANT_ID, academicYearId, DATE);
     }
 
     // ── addDate — error paths ───────────────────────────────────────────────────
@@ -103,8 +111,10 @@ class HolidayDateServiceTest {
 
     @Test
     void addDate_duplicateDate_throwsBadRequestException() {
+        HolidayCalendar cal = new HolidayCalendar();
+        cal.setAcademicYearId(20L);
         when(holidayCalendarRepository.findByIdAndTenantId(CALENDAR_ID, TENANT_ID))
-                .thenReturn(Optional.of(new HolidayCalendar()));
+                .thenReturn(Optional.of(cal));
         when(holidayDateRepository.existsByHolidayCalendarIdAndTenantIdAndDate(CALENDAR_ID, TENANT_ID, DATE))
                 .thenReturn(true);
 
@@ -113,12 +123,15 @@ class HolidayDateServiceTest {
                 .isInstanceOf(BadRequestException.class);
 
         verify(holidayDateRepository, never()).save(any());
+        verify(conflictDetectionService, never()).findPublishedLessonHolidayConflicts(any(), any(), any());
     }
 
     @Test
     void addDate_uniqueConstraintOnSave_throwsBadRequestException() {
+        HolidayCalendar cal = new HolidayCalendar();
+        cal.setAcademicYearId(20L);
         when(holidayCalendarRepository.findByIdAndTenantId(CALENDAR_ID, TENANT_ID))
-                .thenReturn(Optional.of(new HolidayCalendar()));
+                .thenReturn(Optional.of(cal));
         when(holidayDateRepository.existsByHolidayCalendarIdAndTenantIdAndDate(CALENDAR_ID, TENANT_ID, DATE))
                 .thenReturn(false);
         SQLException sqlEx = new SQLException("duplicate key", "23505");
@@ -129,6 +142,8 @@ class HolidayDateServiceTest {
                 service.addDate(CALENDAR_ID, new HolidayDateRequest(DATE, "Race", HolidayType.PUBLIC_HOLIDAY)))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("already exists");
+
+        verify(conflictDetectionService, never()).findPublishedLessonHolidayConflicts(any(), any(), any());
     }
 
     // ── updateDate — happy path ─────────────────────────────────────────────────
@@ -238,7 +253,9 @@ class HolidayDateServiceTest {
         assertThat(result).hasSize(2);
         assertThat(result.get(0).date()).isEqualTo(LocalDate.of(2026, 1, 1));
         assertThat(result.get(0).source()).isEqualTo(HolidaySource.MANUAL);
+        assertThat(result.get(0).lessonConflicts()).isEmpty();
         assertThat(result.get(1).date()).isEqualTo(LocalDate.of(2026, 3, 15));
+        assertThat(result.get(1).lessonConflicts()).isEmpty();
     }
 
     // ── listByAcademicYear — error paths ───────────────────────────────────────

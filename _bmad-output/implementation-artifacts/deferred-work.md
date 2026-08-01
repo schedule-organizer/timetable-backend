@@ -1,5 +1,45 @@
 # Deferred work
 
+## Deferred from: implementation of Epic 5 RES-07…RES-11 (2026-08-01)
+
+- **FR34 has no write path for teacher preferences** — RES-10 reads `teacher_preferences`, and V022 creates the table, but no story defines an endpoint for creating or updating preferences, so they can only be set with direct SQL. Already flagged as a gap in the 2026-03-29 implementation-readiness report. Needs a follow-up story before the availability view is usable in production.
+- **Solver does not yet consume forbidden slots** — `ForbiddenSlotService.findAllForSolver` exposes the rows, but the solver's `UnavailablePeriodPenalty` fact is keyed on a period slot with no entity, and the solver `Lesson` has no room or class reference. Entity-scoped hard unavailability cannot be expressed until SCHED-02/03 fills out the planning model.
+- **`Lesson.teachingGroupId` is never populated** — added by RES-08 for the "Option block groups must share a period" constraint. SCHED-02/03 must set it when building `TimetableSolution` from persisted rows, otherwise the constraint stays inert on real data.
+- **Teaching groups have no lesson-assignment guard on delete** — RES-07's AC says groups with lesson assignments cannot be hard deleted. It is satisfied by never hard deleting, but once `lessons` gains a `teaching_group_id` column (SCHED-02/03) consider whether deactivation should also be blocked or warn.
+- **Endpoint-test auth boilerplate copied again** — `createModUser` / `inviteAndComplete` / `loginAndGetToken` are duplicated into `TeachingGroupEndpointTest`, `OptionBlockEndpointTest`, `ForbiddenSlotEndpointTest`, `TeacherAvailabilityEndpointTest` and `CsvImportEndpointTest`. Extends the same duplication already noted for CONFIG-10; a shared base fixture would now pay for itself.
+- **CSV import has no rate limiting** — `POST /api/v1/import/{entityType}` accepts up to 1000 rows per call with no per-tenant throttle. Same system-wide gap noted for the holiday import endpoint.
+
+## Deferred from: code review of story 5.res-06.md (2026-04-04)
+
+- **`class_subject_hours.periods_per_cycle` allows zero at DB** — V013 `CHECK (periods_per_cycle >= 0)`; RES-06 API uses `@Positive`. Tighten the DB constraint when convenient for consistency with RES-02 deferred note.
+- **Tenant alignment on `class_subject_hours` vs `school_classes`** — FK on `class_id` only; no composite constraint that `tenant_id` matches the parent class row. Service uses `TenantContext`; optional hardening via schema later.
+
+## Deferred from: code review of story 5.res-05.md (2026-04-04)
+
+- **Populate `TeacherSubjectQualification` when assembling `TimetableSolution`** — Constraint and solver tests are in place; no production path builds the solution yet. When timetabling is integrated, map persisted `teacher_qualifications` (via teacher `user_id` + `subject_id`) into `teacherSubjectQualifications` so the solver enforces the same rules as the API.
+
+## Deferred from: code review of story 5.res-04.md (2026-04-02)
+
+- **`lenient()` on `HolidayImportServiceTest` conflict stub** — Shared `@BeforeEach` stub marked lenient so early-return tests do not fail on unnecessary stubbing; slightly weaker Mockito strictness for that class.
+
+## Deferred from: code review of 4.hol-07 + 5.res-03 (2026-04-01)
+
+- **Per-date holiday import conflict queries** — `HolidayImportService` calls `findPublishedLessonHolidayConflicts` once per distinct newly inserted date. Fine for normal feed sizes; consolidate if volume or latency becomes an issue.
+
+## Deferred from: code review of story 5.res-02.md (2026-04-01)
+
+- **Active subject code uniqueness at service layer only** — Same trade-off as `V012` rooms: no partial unique index because H2 test mode does not support it; concurrent creates could theoretically duplicate active codes until a DB constraint or `DataIntegrityViolation` handling is added.
+- **`class_subject_hours.periods_per_cycle` allows zero** — `CHECK (periods_per_cycle >= 0)` permits `0`; may be tightened when RES-06 defines valid allocations.
+- **`class_subject_hours` tenant vs subject alignment** — There is no constraint that `tenant_id` on `class_subject_hours` matches `subjects.tenant_id` for the referenced `subject_id`; RES-06 should tighten allocation integrity when the feature is built out.
+
+## Deferred from: code review of 5.res-01.md (2026-04-01)
+
+- **TenantContext.getTenantId() can return null** — TenantFilter silently skips setting context if the `tenantId` claim is absent or non-numeric; all services call getTenantId() without a null guard, resulting in silent empty results rather than an error. Systemic issue; not introduced by RES-01.
+- **equipmentTags has no @Size bound** — No constraint on list length or individual element length; arbitrarily large payloads accepted and stored. Revisit when input limits are standardised across all DTOs.
+- **@Transactional(readOnly=true) missing on list() and getById()** — Read methods run without a readOnly transaction hint; minor performance/correctness gap consistent with other services in the project.
+- **Soft delete doesn't check lesson references** — Spec notes "rooms referenced by lessons cannot be hard deleted"; no Lesson entity exists yet. Wire referential guard when Lesson CRUD is implemented (Epic 6).
+- **Inactive room name reuse could complicate future reactivation** — By design, soft-deleted room names can be reused immediately. If reactivation is ever added, two active rooms with the same name would exist without triggering the conflict check. Revisit if reactivation is scoped.
+
 ## Deferred from: code review of 4.hol-05.md (2026-03-31)
 
 - **Generic constraint name “Holiday slot must be free”** — `UnavailablePeriodPenalty` may apply to non-holiday unavailability later; constraint label could be renamed when that scope expands.

@@ -11,10 +11,10 @@ import com.schediflow.integration.holiday.HolidayFeedClient;
 import com.schediflow.integration.holiday.HolidayFeedItem;
 import com.schediflow.repository.HolidayCalendarRepository;
 import com.schediflow.repository.HolidayDateRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -25,6 +25,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,8 +38,17 @@ class HolidayImportServiceTest {
     @Mock HolidayFeedClient holidayFeedClient;
     @Mock HolidayCalendarRepository holidayCalendarRepository;
     @Mock HolidayDateRepository holidayDateRepository;
+    @Mock ConflictDetectionService conflictDetectionService;
 
-    @InjectMocks HolidayImportService service;
+    HolidayImportService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new HolidayImportService(
+                holidayFeedClient, holidayCalendarRepository, holidayDateRepository, conflictDetectionService);
+        lenient().when(conflictDetectionService.findPublishedLessonHolidayConflicts(anyLong(), anyLong(), any()))
+                .thenReturn(List.of());
+    }
 
     @Test
     void importPublicHolidays_calendarMissing_throws() {
@@ -50,6 +61,7 @@ class HolidayImportServiceTest {
                 .hasMessageContaining("Holiday calendar not found");
 
         verify(holidayFeedClient, never()).fetchPublicHolidays(any(), anyInt(), any());
+        verify(conflictDetectionService, never()).findPublishedLessonHolidayConflicts(anyLong(), anyLong(), any());
     }
 
     @Test
@@ -69,10 +81,13 @@ class HolidayImportServiceTest {
         assertThat(r.imported()).isEqualTo(2);
         assertThat(r.updated()).isZero();
         assertThat(r.skipped()).isZero();
+        assertThat(r.lessonConflicts()).isEmpty();
 
         ArgumentCaptor<HolidayDate> cap = ArgumentCaptor.forClass(HolidayDate.class);
         verify(holidayDateRepository, times(2)).save(cap.capture());
         assertThat(cap.getAllValues()).allMatch(d -> HolidaySource.IMPORTED.equals(d.getSource()));
+        verify(conflictDetectionService).findPublishedLessonHolidayConflicts(eq(TENANT_ID), eq(99L), eq(LocalDate.of(2026, 1, 1)));
+        verify(conflictDetectionService).findPublishedLessonHolidayConflicts(eq(TENANT_ID), eq(99L), eq(LocalDate.of(2026, 7, 4)));
     }
 
     @Test
@@ -93,7 +108,9 @@ class HolidayImportServiceTest {
         assertThat(r.skipped()).isEqualTo(1);
         assertThat(r.imported()).isZero();
         assertThat(r.updated()).isZero();
+        assertThat(r.lessonConflicts()).isEmpty();
         verify(holidayDateRepository, never()).save(any());
+        verify(conflictDetectionService, never()).findPublishedLessonHolidayConflicts(anyLong(), anyLong(), any());
     }
 
     @Test
@@ -115,6 +132,8 @@ class HolidayImportServiceTest {
         assertThat(r.updated()).isEqualTo(1);
         assertThat(r.imported()).isZero();
         assertThat(r.skipped()).isZero();
+        assertThat(r.lessonConflicts()).isEmpty();
+        verify(conflictDetectionService, never()).findPublishedLessonHolidayConflicts(anyLong(), anyLong(), any());
 
         ArgumentCaptor<HolidayDate> cap = ArgumentCaptor.forClass(HolidayDate.class);
         verify(holidayDateRepository).save(cap.capture());
@@ -139,6 +158,8 @@ class HolidayImportServiceTest {
 
         assertThat(r.updated()).isEqualTo(1);
         assertThat(r.skipped()).isZero();
+        assertThat(r.lessonConflicts()).isEmpty();
+        verify(conflictDetectionService, never()).findPublishedLessonHolidayConflicts(anyLong(), anyLong(), any());
 
         ArgumentCaptor<HolidayDate> cap = ArgumentCaptor.forClass(HolidayDate.class);
         verify(holidayDateRepository).save(cap.capture());
@@ -146,7 +167,9 @@ class HolidayImportServiceTest {
     }
 
     private void stubCalendarExists() {
+        HolidayCalendar cal = new HolidayCalendar();
+        cal.setAcademicYearId(99L);
         when(holidayCalendarRepository.findByIdAndTenantId(CALENDAR_ID, TENANT_ID))
-                .thenReturn(Optional.of(new HolidayCalendar()));
+                .thenReturn(Optional.of(cal));
     }
 }
