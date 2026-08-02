@@ -1,5 +1,6 @@
 package com.schediflow.websocket;
 
+import com.schediflow.repository.SolverJobRepository;
 import com.schediflow.repository.TimetableRepository;
 import com.schediflow.security.JwtPrincipal;
 import com.schediflow.security.JwtTokenProvider;
@@ -32,11 +33,15 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final TimetableRepository timetableRepository;
+    private final SolverJobRepository solverJobRepository;
 
     public StompAuthChannelInterceptor(
-            JwtTokenProvider jwtTokenProvider, TimetableRepository timetableRepository) {
+            JwtTokenProvider jwtTokenProvider,
+            TimetableRepository timetableRepository,
+            SolverJobRepository solverJobRepository) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.timetableRepository = timetableRepository;
+        this.solverJobRepository = solverJobRepository;
     }
 
     @Override
@@ -105,6 +110,16 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             if (timetableRepository.findByIdAndTenantId(timetableId, principal.tenantId()).isEmpty()) {
                 throw new MessagingAuthenticationException(
                         "Cannot subscribe to a timetable outside your institution");
+            }
+            return;
+        }
+
+        // Solver topics carry no tenant either; the job row decides.
+        Long solverJobId = WebSocketDestinations.solverJobIdOf(destination);
+        if (solverJobId != null) {
+            if (solverJobRepository.findByIdAndTenantId(solverJobId, principal.tenantId()).isEmpty()) {
+                throw new MessagingAuthenticationException(
+                        "Cannot subscribe to a solver job outside your institution");
             }
             return;
         }

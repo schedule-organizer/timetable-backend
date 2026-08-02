@@ -21,6 +21,8 @@ public final class WebSocketDestinations {
             Pattern.compile("^/queue/user/(\\d+)/notifications$");
     private static final Pattern TIMETABLE_TOPIC =
             Pattern.compile("^/topic/timetable/(\\d+)$");
+    private static final Pattern SOLVER_TOPIC =
+            Pattern.compile("^/topic/solver/(\\d+)/(progress|complete)$");
 
     private WebSocketDestinations() {}
 
@@ -49,6 +51,19 @@ public final class WebSocketDestinations {
     /** The timetable id a destination targets, or {@code null} if it is not a timetable topic. */
     public static Long timetableIdOf(String destination) {
         return firstGroup(TIMETABLE_TOPIC, destination);
+    }
+
+    public static String solverProgressTopic(Long jobId) {
+        return "/topic/solver/" + jobId + "/progress";
+    }
+
+    public static String solverCompleteTopic(Long jobId) {
+        return "/topic/solver/" + jobId + "/complete";
+    }
+
+    /** The solver job id a destination targets, or {@code null} if it is not a solver topic. */
+    public static Long solverJobIdOf(String destination) {
+        return firstGroup(SOLVER_TOPIC, destination);
     }
 
     private static Long firstGroup(Pattern pattern, String destination) {

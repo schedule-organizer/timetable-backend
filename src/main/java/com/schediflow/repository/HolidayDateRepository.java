@@ -9,6 +9,10 @@ import java.util.Optional;
 
 public interface HolidayDateRepository extends JpaRepository<HolidayDate, Long> {
 
+    /** Holiday dates anywhere in the tenant between two dates, for solver problem facts (SCHED-03). */
+    List<HolidayDate> findByTenantIdAndDateBetween(
+            Long tenantId, java.time.LocalDate from, java.time.LocalDate to);
+
     List<HolidayDate> findByHolidayCalendarId(Long holidayCalendarId);
 
     List<HolidayDate> findByHolidayCalendarIdOrderByDateAsc(Long holidayCalendarId);
