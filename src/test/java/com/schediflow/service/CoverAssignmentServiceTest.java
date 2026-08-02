@@ -44,6 +44,10 @@ class CoverAssignmentServiceTest {
     @Mock TeacherRepository teacherRepository;
     @Mock CoverEligibilityService coverEligibilityService;
     @Mock WebSocketEventPublisher eventPublisher;
+    @Mock com.schediflow.repository.UserRepository userRepository;
+    @Mock com.schediflow.repository.SubjectRepository subjectRepository;
+    @Mock com.schediflow.repository.SchoolClassRepository schoolClassRepository;
+    @Mock EmailService emailService;
 
     CoverAssignmentService service;
 
@@ -66,7 +70,11 @@ class CoverAssignmentServiceTest {
                 lessonRepository,
                 teacherRepository,
                 coverEligibilityService,
-                eventPublisher);
+                eventPublisher,
+                userRepository,
+                subjectRepository,
+                schoolClassRepository,
+                emailService);
     }
 
     @AfterEach

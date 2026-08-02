@@ -17,6 +17,7 @@ import com.schediflow.repository.DelegationRequestLessonRepository;
 import com.schediflow.repository.DelegationRequestRepository;
 import com.schediflow.repository.LessonRepository;
 import com.schediflow.repository.TeacherRepository;
+import com.schediflow.repository.UserRepository;
 import com.schediflow.security.JwtPrincipal;
 import com.schediflow.security.TenantContext;
 import com.schediflow.service.delegation.DelegationReassignmentPlanner;
@@ -47,18 +48,24 @@ public class DelegationService {
     private final LessonRepository lessonRepository;
     private final TeacherRepository teacherRepository;
     private final WebSocketEventPublisher eventPublisher;
+    private final UserRepository userRepository;
+    private final EmailService emailService;
 
     public DelegationService(
             DelegationRequestRepository delegationRequestRepository,
             DelegationRequestLessonRepository delegationRequestLessonRepository,
             LessonRepository lessonRepository,
             TeacherRepository teacherRepository,
-            WebSocketEventPublisher eventPublisher) {
+            WebSocketEventPublisher eventPublisher,
+            UserRepository userRepository,
+            EmailService emailService) {
         this.delegationRequestRepository = delegationRequestRepository;
         this.delegationRequestLessonRepository = delegationRequestLessonRepository;
         this.lessonRepository = lessonRepository;
         this.teacherRepository = teacherRepository;
         this.eventPublisher = eventPublisher;
+        this.userRepository = userRepository;
+        this.emailService = emailService;
     }
 
     @Transactional
@@ -198,9 +205,22 @@ public class DelegationService {
         DelegationUpdateEvent event = new DelegationUpdateEvent(
                 request.getId(), request.getType(), request.getStatus(), lessonIds);
         eventPublisher.publishToUser(request.getRequestedByUserId(), event);
+        emailDecision(tenantId, request, request.getRequestedByUserId());
         teacherRepository
                 .findByIdAndTenantIdAndActive(request.getTargetTeacherId(), tenantId, true)
-                .ifPresent(target -> eventPublisher.publishToUser(target.getUserId(), event));
+                .ifPresent(target -> {
+                    eventPublisher.publishToUser(target.getUserId(), event);
+                    emailDecision(tenantId, request, target.getUserId());
+                });
+    }
+
+    private void emailDecision(Long tenantId, DelegationRequest request, Long userId) {
+        userRepository.findByIdAndTenantId(userId, tenantId).ifPresent(user ->
+                emailService.sendDelegationDecision(
+                        user.getEmail(),
+                        request.getType(),
+                        request.getStatus(),
+                        request.getRejectionReason()));
     }
 
     private static DelegationStatus parseDecision(String raw) {

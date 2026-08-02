@@ -1,13 +1,17 @@
 package com.schediflow.service;
 
+import com.schediflow.domain.Term;
 import com.schediflow.domain.Timetable;
+import com.schediflow.domain.User;
 import com.schediflow.domain.TimetableStatus;
 import com.schediflow.dto.event.TimetablePublishedEvent;
 import com.schediflow.dto.request.TimetablePublishRequest;
 import com.schediflow.dto.response.TimetableResponse;
 import com.schediflow.exception.BadRequestException;
 import com.schediflow.exception.ResourceNotFoundException;
+import com.schediflow.repository.TermRepository;
 import com.schediflow.repository.TimetableRepository;
+import com.schediflow.repository.UserRepository;
 import com.schediflow.security.TenantContext;
 import com.schediflow.websocket.WebSocketEventPublisher;
 import org.springframework.stereotype.Service;
@@ -29,16 +33,25 @@ public class TimetablePublishService {
     private final TimetableService timetableService;
     private final ConflictDetectionService conflictDetectionService;
     private final WebSocketEventPublisher eventPublisher;
+    private final TermRepository termRepository;
+    private final UserRepository userRepository;
+    private final EmailService emailService;
 
     public TimetablePublishService(
             TimetableRepository timetableRepository,
             TimetableService timetableService,
             ConflictDetectionService conflictDetectionService,
-            WebSocketEventPublisher eventPublisher) {
+            WebSocketEventPublisher eventPublisher,
+            TermRepository termRepository,
+            UserRepository userRepository,
+            EmailService emailService) {
         this.timetableRepository = timetableRepository;
         this.timetableService = timetableService;
         this.conflictDetectionService = conflictDetectionService;
         this.eventPublisher = eventPublisher;
+        this.termRepository = termRepository;
+        this.userRepository = userRepository;
+        this.emailService = emailService;
     }
 
     /**
@@ -77,11 +90,32 @@ public class TimetablePublishService {
         timetable.setPublishedAt(OffsetDateTime.now());
         timetable.setPublishAt(null);
         Timetable saved = timetableRepository.save(timetable);
-
-        eventPublisher.publishToTenant(
-                tenantId,
-                new TimetablePublishedEvent(saved.getId(), saved.getTermId(), saved.getPublishedAt()));
+        announce(tenantId, saved);
         return saved;
+    }
+
+    /**
+     * Broadcasts the publication to the tenant, and repeats it on each active user's personal queue
+     * so a targeted alert can be surfaced even when nobody is watching the shared topic (NOTIF-02).
+     */
+    private void announce(Long tenantId, Timetable timetable) {
+        String termName = termRepository
+                .findByIdAndTenantId(timetable.getTermId(), tenantId)
+                .map(Term::getName)
+                .orElse(null);
+        TimetablePublishedEvent event = new TimetablePublishedEvent(
+                timetable.getId(),
+                timetable.getName(),
+                timetable.getTermId(),
+                termName,
+                timetable.getPublishedAt());
+
+        eventPublisher.publishToTenant(tenantId, event);
+        for (User recipient : userRepository.findByTenantIdAndStatus(tenantId, "ACTIVE")) {
+            eventPublisher.publishToUser(recipient.getId(), event);
+            emailService.sendTimetablePublished(
+                    recipient.getEmail(), timetable.getName(), termName);
+        }
     }
 
     /**

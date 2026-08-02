@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body style="font-family: system-ui, sans-serif; color: #1a1a1a;">
+  <h2>A new timetable has been published</h2>
+  <p>
+    <strong th:text="${timetableName}">Timetable</strong>
+    <span th:if="${!#strings.isEmpty(termName)}"> for <span th:text="${termName}">term</span></span>
+    is now live.
+  </p>
+  <p style="color:#666;font-size:13px;">Sign in to SchediFlow to see your schedule.</p>
+</body>
+</html>

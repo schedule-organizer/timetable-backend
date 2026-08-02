@@ -31,6 +31,11 @@ import java.util.Objects;
 @Component
 public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
+    /** STOMP session attribute holding the connected user's tenant id. */
+    public static final String TENANT_SESSION_ATTRIBUTE = "tenantId";
+    /** STOMP session attribute holding the connected user's id. */
+    public static final String USER_SESSION_ATTRIBUTE = "userId";
+
     private final JwtTokenProvider jwtTokenProvider;
     private final TimetableRepository timetableRepository;
     private final SolverJobRepository solverJobRepository;
@@ -53,7 +58,15 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         }
 
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
-            accessor.setUser(authenticate(accessor));
+            UsernamePasswordAuthenticationToken authentication = authenticate(accessor);
+            accessor.setUser(authentication);
+            // The principal already carries the tenant, but NOTIF-01 asks for it on the session
+            // explicitly so anything reading session attributes can scope without unwrapping auth.
+            JwtPrincipal principal = (JwtPrincipal) authentication.getPrincipal();
+            if (accessor.getSessionAttributes() != null) {
+                accessor.getSessionAttributes().put(TENANT_SESSION_ATTRIBUTE, principal.tenantId());
+                accessor.getSessionAttributes().put(USER_SESSION_ATTRIBUTE, principal.userId());
+            }
         } else if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
             authorizeSubscription(accessor);
         }

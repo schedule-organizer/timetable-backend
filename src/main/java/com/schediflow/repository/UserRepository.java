@@ -12,4 +12,7 @@ public interface UserRepository extends JpaRepository<User, Long>,
     Optional<User> findByEmail(String email);
 
     Optional<User> findByIdAndTenantId(Long id, Long tenantId);
+
+    /** Recipients for tenant-wide notifications (NOTIF-02 / NOTIF-03). */
+    java.util.List<User> findByTenantIdAndStatus(Long tenantId, String status);
 }

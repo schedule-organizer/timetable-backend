@@ -29,9 +29,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         this.allowedOrigins = allowedOrigins;
     }
 
+    /**
+     * The endpoint is registered twice on purpose: natively for clients that speak WebSocket, and
+     * again with SockJS for those behind proxies that do not (NOTIF-01). Registering only the SockJS
+     * variant would break native clients, which is what the existing integration test uses.
+     */
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws").setAllowedOriginPatterns(allowedOrigins);
+        registry.addEndpoint("/ws").setAllowedOriginPatterns(allowedOrigins).withSockJS();
     }
 
     @Override

@@ -1,0 +1,8 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body style="font-family: system-ui, sans-serif; color: #1a1a1a;">
+  <h2>Your delegation request was <span th:text="${#strings.toLowerCase(status)}">decided</span></h2>
+  <p>Request type: <strong th:text="${type}">HANDOVER</strong></p>
+  <p th:if="${!#strings.isEmpty(reason)}">Reason: <span th:text="${reason}">reason</span></p>
+</body>
+</html>

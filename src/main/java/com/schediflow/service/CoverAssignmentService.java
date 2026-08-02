@@ -2,6 +2,8 @@ package com.schediflow.service;
 
 import com.schediflow.domain.CoverAssignment;
 import com.schediflow.domain.Lesson;
+import com.schediflow.domain.SchoolClass;
+import com.schediflow.domain.Subject;
 import com.schediflow.domain.Teacher;
 import com.schediflow.dto.event.CoverAssignedEvent;
 import com.schediflow.dto.request.CoverAssignmentRequest;
@@ -11,7 +13,10 @@ import com.schediflow.exception.ConflictException;
 import com.schediflow.exception.ResourceNotFoundException;
 import com.schediflow.repository.CoverAssignmentRepository;
 import com.schediflow.repository.LessonRepository;
+import com.schediflow.repository.SchoolClassRepository;
+import com.schediflow.repository.SubjectRepository;
 import com.schediflow.repository.TeacherRepository;
+import com.schediflow.repository.UserRepository;
 import com.schediflow.security.JwtPrincipal;
 import com.schediflow.security.TenantContext;
 import com.schediflow.service.cover.CoverEligibilityService;
@@ -28,18 +33,30 @@ public class CoverAssignmentService {
     private final TeacherRepository teacherRepository;
     private final CoverEligibilityService coverEligibilityService;
     private final WebSocketEventPublisher eventPublisher;
+    private final UserRepository userRepository;
+    private final SubjectRepository subjectRepository;
+    private final SchoolClassRepository schoolClassRepository;
+    private final EmailService emailService;
 
     public CoverAssignmentService(
             CoverAssignmentRepository coverAssignmentRepository,
             LessonRepository lessonRepository,
             TeacherRepository teacherRepository,
             CoverEligibilityService coverEligibilityService,
-            WebSocketEventPublisher eventPublisher) {
+            WebSocketEventPublisher eventPublisher,
+            UserRepository userRepository,
+            SubjectRepository subjectRepository,
+            SchoolClassRepository schoolClassRepository,
+            EmailService emailService) {
         this.coverAssignmentRepository = coverAssignmentRepository;
         this.lessonRepository = lessonRepository;
         this.teacherRepository = teacherRepository;
         this.coverEligibilityService = coverEligibilityService;
         this.eventPublisher = eventPublisher;
+        this.userRepository = userRepository;
+        this.subjectRepository = subjectRepository;
+        this.schoolClassRepository = schoolClassRepository;
+        this.emailService = emailService;
     }
 
     @Transactional
@@ -90,7 +107,24 @@ public class CoverAssignmentService {
                         saved.getOriginalTeacherUserId(),
                         saved.getAssignedAt()));
 
+        notifyCoverTeacher(tenantId, coverTeacher, lesson);
         return toResponse(saved);
+    }
+
+    /** Best-effort: a failed email must never undo an assignment that has already been made. */
+    private void notifyCoverTeacher(Long tenantId, Teacher coverTeacher, Lesson lesson) {
+        userRepository.findByIdAndTenantId(coverTeacher.getUserId(), tenantId).ifPresent(user -> {
+            String subjectName = subjectRepository
+                    .findByIdAndTenantIdAndActive(lesson.getSubjectId(), tenantId, true)
+                    .map(Subject::getName)
+                    .orElse("a lesson");
+            String className = schoolClassRepository
+                    .findByIdAndTenantIdAndActive(lesson.getClassId(), tenantId, true)
+                    .map(SchoolClass::getName)
+                    .orElse("a class");
+            emailService.sendCoverAssigned(
+                    user.getEmail(), subjectName, className, String.valueOf(lesson.getScheduledDate()));
+        });
     }
 
     private static String trimToNull(String value) {

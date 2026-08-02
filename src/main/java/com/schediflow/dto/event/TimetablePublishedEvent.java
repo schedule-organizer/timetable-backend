@@ -6,13 +6,20 @@ import java.time.OffsetDateTime;
 public record TimetablePublishedEvent(
         String event,
         Long timetableId,
+        String timetableName,
         Long termId,
+        String termName,
         OffsetDateTime publishedAt
 ) {
 
     public static final String TYPE = "TIMETABLE_PUBLISHED";
 
-    public TimetablePublishedEvent(Long timetableId, Long termId, OffsetDateTime publishedAt) {
-        this(TYPE, timetableId, termId, publishedAt);
+    public TimetablePublishedEvent(
+            Long timetableId,
+            String timetableName,
+            Long termId,
+            String termName,
+            OffsetDateTime publishedAt) {
+        this(TYPE, timetableId, timetableName, termId, termName, publishedAt);
     }
 }
