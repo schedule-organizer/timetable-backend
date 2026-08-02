@@ -1,5 +1,17 @@
 # Deferred work
 
+## Deferred from: implementation of Epic 7 COVER-01…COVER-07 (2026-08-02)
+
+- **NOTIF-01 should adopt `WebSocketEventPublisher` rather than rebuild it** — COVER-07 had to build the STOMP stack because Epic 8 is `backlog`. `WebSocketConfig`, `StompAuthChannelInterceptor`, `WebSocketDestinations` and `WebSocketEventPublisher` already implement the destination contract, JWT CONNECT auth and per-subscription authorization. NOTIF-01 should extend these, not duplicate them.
+- **Epic 7 is not exercisable end to end until Epic 6 lands** — nothing creates `lessons`, so cover, delegation and overrides all operate on rows that only tests insert. The V015 schema is sufficient, so no rework is expected, but there is no real-data path yet.
+- **No write API for temporary-schedule lesson overrides** — COVER-05's AC only requires that overrides be stored separately, and no Epic 7 story defines how one is authored. `temporary_schedule_lessons` is created and cleared by COVER-06 but can only be populated by direct SQL. Needs a follow-up story, most naturally alongside SCHED-02's lesson grid.
+- **Temporary schedules are not yet applied when reading a timetable** — the overlay is stored and expired correctly, but no read path merges overrides over base lessons for a date in range. That belongs with SCHED-02.
+- **"Only one active temporary schedule per timetable" is service-enforced only** — a partial unique index on `(base_timetable_id) WHERE status = 'ACTIVE'` would enforce it in the database, but is not portable to the H2 instance the tests use. Consider adding it in a Postgres-only migration.
+- **Delegation `SWAP` semantics were invented** — the stories never define what a swap exchanges. COVER-04 trades the target's lesson in the same slot, or moves the lesson when the slot is empty. Confirm with product before this reaches users.
+- **No notification when a delegation request is submitted** — `DELEGATION_UPDATE` only fires on a decision, per the ACs. The target teacher currently learns nothing until a moderator acts.
+- **No listing endpoint for delegation requests** — a moderator can decide a request by id but has no way to discover pending ones through the API. `findByTenantIdAndStatusOrderByIdAsc` exists unused, ready for it.
+- **Cover assignments cannot be read back or removed** — COVER-01 specifies only `POST`; there is no GET or DELETE, so cover cannot be cancelled once arranged.
+
 ## Deferred from: implementation of Epic 5 RES-07…RES-11 (2026-08-01)
 
 - **FR34 has no write path for teacher preferences** — RES-10 reads `teacher_preferences`, and V022 creates the table, but no story defines an endpoint for creating or updating preferences, so they can only be set with direct SQL. Already flagged as a gap in the 2026-03-29 implementation-readiness report. Needs a follow-up story before the availability view is usable in production.
