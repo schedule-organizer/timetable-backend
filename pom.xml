@@ -125,6 +125,12 @@
             <artifactId>caffeine</artifactId>
         </dependency>
 
+        <!-- WebSocket / STOMP — cover and delegation events (COVER-07) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+
         <!-- Apache Commons CSV — bulk import parsing (RES-11) -->
         <dependency>
             <groupId>org.apache.commons</groupId>
