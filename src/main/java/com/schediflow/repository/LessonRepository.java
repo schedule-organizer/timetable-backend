@@ -21,6 +21,8 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
 
     List<Lesson> findByIdInAndTenantId(Collection<Long> ids, Long tenantId);
 
+    List<Lesson> findByTenantIdAndTeacherUserId(Long tenantId, Long teacherUserId);
+
     /** Teacher user ids already teaching in the given slot, ignoring the lesson being covered. */
     @Query("""
             select l.teacherUserId

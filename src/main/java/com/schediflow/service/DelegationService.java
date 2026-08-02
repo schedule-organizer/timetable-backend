@@ -6,6 +6,8 @@ import com.schediflow.domain.DelegationStatus;
 import com.schediflow.domain.DelegationType;
 import com.schediflow.domain.Lesson;
 import com.schediflow.domain.Teacher;
+import com.schediflow.dto.event.DelegationUpdateEvent;
+import com.schediflow.dto.request.DelegationDecisionRequest;
 import com.schediflow.dto.request.DelegationRequestSubmission;
 import com.schediflow.dto.response.DelegationRequestResponse;
 import com.schediflow.exception.BadRequestException;
@@ -17,11 +19,16 @@ import com.schediflow.repository.LessonRepository;
 import com.schediflow.repository.TeacherRepository;
 import com.schediflow.security.JwtPrincipal;
 import com.schediflow.security.TenantContext;
+import com.schediflow.service.delegation.DelegationReassignmentPlanner;
+import com.schediflow.service.delegation.DelegationReassignmentPlanner.Reassignment;
+import com.schediflow.websocket.WebSocketEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -39,16 +46,19 @@ public class DelegationService {
     private final DelegationRequestLessonRepository delegationRequestLessonRepository;
     private final LessonRepository lessonRepository;
     private final TeacherRepository teacherRepository;
+    private final WebSocketEventPublisher eventPublisher;
 
     public DelegationService(
             DelegationRequestRepository delegationRequestRepository,
             DelegationRequestLessonRepository delegationRequestLessonRepository,
             LessonRepository lessonRepository,
-            TeacherRepository teacherRepository) {
+            TeacherRepository teacherRepository,
+            WebSocketEventPublisher eventPublisher) {
         this.delegationRequestRepository = delegationRequestRepository;
         this.delegationRequestLessonRepository = delegationRequestLessonRepository;
         this.lessonRepository = lessonRepository;
         this.teacherRepository = teacherRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -109,6 +119,100 @@ public class DelegationService {
         }
 
         return toResponse(saved, lessonIds);
+    }
+
+    /**
+     * Approves or rejects a pending request. An approval reassigns every affected lesson in one
+     * transaction, but only after the whole post-change picture has been checked for double-booking.
+     */
+    @Transactional
+    public DelegationRequestResponse decide(
+            JwtPrincipal principal, Long requestId, DelegationDecisionRequest decisionRequest) {
+        Long tenantId = TenantContext.getTenantId();
+        DelegationRequest request = delegationRequestRepository
+                .findByIdAndTenantId(requestId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Delegation request not found: " + requestId));
+
+        if (DelegationStatus.valueOf(request.getStatus()).isTerminal()) {
+            throw new BadRequestException(
+                    "Delegation request is already " + request.getStatus() + " and cannot be decided again");
+        }
+
+        DelegationStatus decision = parseDecision(decisionRequest.decision());
+        List<Long> lessonIds = lessonIdsOf(requestId);
+
+        if (decision == DelegationStatus.REJECTED) {
+            String rejectionReason = trimToNull(decisionRequest.rejectionReason());
+            if (rejectionReason == null) {
+                throw new BadRequestException("rejectionReason is required when rejecting a request");
+            }
+            request.setRejectionReason(rejectionReason);
+        } else {
+            applyReassignments(tenantId, request, lessonIds);
+        }
+
+        request.setStatus(decision.name());
+        request.setDecidedBy(principal.userId());
+        request.setDecidedAt(OffsetDateTime.now());
+        DelegationRequest saved = delegationRequestRepository.save(request);
+
+        publishDecision(tenantId, saved, lessonIds);
+        return toResponse(saved, lessonIds);
+    }
+
+    private void applyReassignments(Long tenantId, DelegationRequest request, List<Long> lessonIds) {
+        Teacher target = teacherRepository
+                .findByIdAndTenantIdAndActive(request.getTargetTeacherId(), tenantId, true)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Target teacher is no longer active: " + request.getTargetTeacherId()));
+
+        List<Lesson> requestedLessons = lessonRepository.findByIdInAndTenantId(lessonIds, tenantId);
+        if (requestedLessons.size() != lessonIds.size()) {
+            throw new ConflictException("A lesson in this request no longer exists");
+        }
+        List<Lesson> targetLessons =
+                lessonRepository.findByTenantIdAndTeacherUserId(tenantId, target.getUserId());
+
+        List<Reassignment> plan = DelegationReassignmentPlanner.plan(
+                DelegationType.valueOf(request.getType()),
+                requestedLessons,
+                targetLessons,
+                request.getRequestedByUserId(),
+                target.getUserId());
+
+        Map<Long, List<Lesson>> lessonsByTeacher = new HashMap<>();
+        lessonsByTeacher.put(
+                request.getRequestedByUserId(),
+                lessonRepository.findByTenantIdAndTeacherUserId(tenantId, request.getRequestedByUserId()));
+        lessonsByTeacher.put(target.getUserId(), targetLessons);
+        DelegationReassignmentPlanner.assertNoConflicts(plan, lessonsByTeacher);
+
+        for (Reassignment reassignment : plan) {
+            reassignment.lesson().setTeacherUserId(reassignment.newTeacherUserId());
+            lessonRepository.save(reassignment.lesson());
+        }
+    }
+
+    /** Both sides of the request hear about the outcome on their personal queues. */
+    private void publishDecision(Long tenantId, DelegationRequest request, List<Long> lessonIds) {
+        DelegationUpdateEvent event = new DelegationUpdateEvent(
+                request.getId(), request.getType(), request.getStatus(), lessonIds);
+        eventPublisher.publishToUser(request.getRequestedByUserId(), event);
+        teacherRepository
+                .findByIdAndTenantIdAndActive(request.getTargetTeacherId(), tenantId, true)
+                .ifPresent(target -> eventPublisher.publishToUser(target.getUserId(), event));
+    }
+
+    private static DelegationStatus parseDecision(String raw) {
+        String normalized = raw == null ? "" : raw.trim().toUpperCase();
+        if (DelegationStatus.APPROVED.name().equals(normalized)) {
+            return DelegationStatus.APPROVED;
+        }
+        if (DelegationStatus.REJECTED.name().equals(normalized)) {
+            return DelegationStatus.REJECTED;
+        }
+        throw new BadRequestException(
+                "Invalid decision: " + raw + ". Must be one of: APPROVED, REJECTED");
     }
 
     static DelegationType parseType(String raw) {
