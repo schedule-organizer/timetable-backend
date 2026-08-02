@@ -3,6 +3,7 @@ package com.schediflow.repository;
 import com.schediflow.domain.Lesson;
 import com.schediflow.dto.response.HolidayLessonConflictResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -22,6 +23,11 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
     List<Lesson> findByIdInAndTenantId(Collection<Long> ids, Long tenantId);
 
     List<Lesson> findByTenantIdAndTeacherUserId(Long tenantId, Long teacherUserId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("delete from Lesson l where l.timetableId = :timetableId and l.tenantId = :tenantId")
+    int deleteByTimetableIdAndTenantId(
+            @Param("timetableId") Long timetableId, @Param("tenantId") Long tenantId);
 
     /** Teacher user ids already teaching in the given slot, ignoring the lesson being covered. */
     @Query("""
