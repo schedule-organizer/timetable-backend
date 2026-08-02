@@ -16,6 +16,7 @@ import com.schediflow.security.TenantContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -120,6 +121,7 @@ public class TimetableService {
 
         if (next == TimetableStatus.PUBLISHED) {
             archiveCurrentlyPublished(tenantId, timetable.getTermId(), timetable.getId());
+            timetable.setPublishedAt(OffsetDateTime.now());
         }
         timetable.setStatus(next.name());
         return toResponse(timetableRepository.save(timetable));
@@ -147,7 +149,7 @@ public class TimetableService {
                 .orElse(null);
     }
 
-    private void archiveCurrentlyPublished(Long tenantId, Long termId, Long excludeId) {
+    void archiveCurrentlyPublished(Long tenantId, Long termId, Long excludeId) {
         for (Timetable published : timetableRepository.findByTenantIdAndTermIdAndStatusOrderByIdAsc(
                 tenantId, termId, TimetableStatus.PUBLISHED.name())) {
             if (!Objects.equals(published.getId(), excludeId)) {
@@ -196,13 +198,15 @@ public class TimetableService {
                                         .collect(Collectors.joining(", "))));
     }
 
-    private static TimetableResponse toResponse(Timetable timetable) {
+    static TimetableResponse toResponse(Timetable timetable) {
         return new TimetableResponse(
                 timetable.getId(),
                 timetable.getName(),
                 timetable.getTermId(),
                 timetable.getBellScheduleId(),
                 timetable.getStatus(),
+                timetable.getPublishedAt(),
+                timetable.getPublishAt(),
                 timetable.getCreatedAt());
     }
 }

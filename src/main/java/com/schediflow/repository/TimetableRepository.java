@@ -17,4 +17,7 @@ public interface TimetableRepository extends JpaRepository<Timetable, Long> {
     List<Timetable> findByTenantIdAndStatusOrderByIdAsc(Long tenantId, String status);
 
     List<Timetable> findByTenantIdAndTermIdAndStatusOrderByIdAsc(Long tenantId, Long termId, String status);
+
+    /** Drafts whose scheduled publication time has arrived (SCHED-07). */
+    List<Timetable> findByStatusAndPublishAtLessThanEqual(String status, java.time.OffsetDateTime at);
 }

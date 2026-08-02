@@ -1,10 +1,12 @@
 package com.schediflow.api.v1;
 
 import com.schediflow.dto.request.TimetableRequest;
+import com.schediflow.dto.request.TimetablePublishRequest;
 import com.schediflow.dto.request.TimetableStatusRequest;
 import com.schediflow.dto.response.TimetableLessonResponse;
 import com.schediflow.dto.response.TimetableResponse;
 import com.schediflow.service.TimetableGridService;
+import com.schediflow.service.TimetablePublishService;
 import com.schediflow.service.TimetableService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -24,11 +26,28 @@ public class TimetableController {
 
     private final TimetableService timetableService;
     private final TimetableGridService timetableGridService;
+    private final TimetablePublishService timetablePublishService;
 
     public TimetableController(
-            TimetableService timetableService, TimetableGridService timetableGridService) {
+            TimetableService timetableService,
+            TimetableGridService timetableGridService,
+            TimetablePublishService timetablePublishService) {
         this.timetableService = timetableService;
         this.timetableGridService = timetableGridService;
+        this.timetablePublishService = timetablePublishService;
+    }
+
+    /**
+     * Publishes a timetable, or schedules it for a future instant (SCHED-07).
+     *
+     * @return 200 with the timetable; 400 if it has unresolved conflicts or is not a DRAFT;
+     *         404 if not in the tenant
+     */
+    @PostMapping("/{id}/publish")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    public ResponseEntity<TimetableResponse> publish(
+            @PathVariable Long id, @RequestBody(required = false) TimetablePublishRequest request) {
+        return ResponseEntity.ok(timetablePublishService.publish(id, request));
     }
 
     /**

@@ -8,5 +8,7 @@ public record TimetableResponse(
         Long termId,
         Long bellScheduleId,
         String status,
+        OffsetDateTime publishedAt,
+        OffsetDateTime publishAt,
         OffsetDateTime createdAt
 ) {}
