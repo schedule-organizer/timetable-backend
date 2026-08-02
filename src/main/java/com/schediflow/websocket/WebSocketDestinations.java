@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
  * <ul>
  *   <li>Tenant broadcast — {@code /topic/tenant/{tenantId}/notifications}</li>
  *   <li>Personal queue — {@code /queue/user/{userId}/notifications}</li>
+ *   <li>Timetable grid — {@code /topic/timetable/{timetableId}} (SCHED-12)</li>
  * </ul>
  */
 public final class WebSocketDestinations {
@@ -18,6 +19,8 @@ public final class WebSocketDestinations {
             Pattern.compile("^/topic/tenant/(\\d+)/notifications$");
     private static final Pattern USER_QUEUE =
             Pattern.compile("^/queue/user/(\\d+)/notifications$");
+    private static final Pattern TIMETABLE_TOPIC =
+            Pattern.compile("^/topic/timetable/(\\d+)$");
 
     private WebSocketDestinations() {}
 
@@ -37,6 +40,15 @@ public final class WebSocketDestinations {
     /** The user id a destination targets, or {@code null} if it is not a personal queue. */
     public static Long userIdOf(String destination) {
         return firstGroup(USER_QUEUE, destination);
+    }
+
+    public static String timetableTopic(Long timetableId) {
+        return "/topic/timetable/" + timetableId;
+    }
+
+    /** The timetable id a destination targets, or {@code null} if it is not a timetable topic. */
+    public static Long timetableIdOf(String destination) {
+        return firstGroup(TIMETABLE_TOPIC, destination);
     }
 
     private static Long firstGroup(Pattern pattern, String destination) {

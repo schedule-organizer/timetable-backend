@@ -1,5 +1,6 @@
 package com.schediflow.websocket;
 
+import com.schediflow.repository.TimetableRepository;
 import com.schediflow.security.JwtPrincipal;
 import com.schediflow.security.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
@@ -30,9 +31,12 @@ import java.util.Objects;
 public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final TimetableRepository timetableRepository;
 
-    public StompAuthChannelInterceptor(JwtTokenProvider jwtTokenProvider) {
+    public StompAuthChannelInterceptor(
+            JwtTokenProvider jwtTokenProvider, TimetableRepository timetableRepository) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.timetableRepository = timetableRepository;
     }
 
     @Override
@@ -91,6 +95,16 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         if (userId != null) {
             if (!Objects.equals(userId, principal.userId())) {
                 throw new MessagingAuthenticationException("Cannot subscribe to another user's queue");
+            }
+            return;
+        }
+
+        // A timetable topic carries no tenant in its path, so ownership is resolved from the row.
+        Long timetableId = WebSocketDestinations.timetableIdOf(destination);
+        if (timetableId != null) {
+            if (timetableRepository.findByIdAndTenantId(timetableId, principal.tenantId()).isEmpty()) {
+                throw new MessagingAuthenticationException(
+                        "Cannot subscribe to a timetable outside your institution");
             }
             return;
         }

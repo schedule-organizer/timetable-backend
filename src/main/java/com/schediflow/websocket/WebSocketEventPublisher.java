@@ -32,6 +32,15 @@ public class WebSocketEventPublisher {
         send(WebSocketDestinations.userQueue(userId), payload);
     }
 
+    /**
+     * Broadcasts to an arbitrary topic already built by {@link WebSocketDestinations}. Callers must
+     * use that class rather than hand-building a destination, so subscription authorization and
+     * publishing can never drift apart.
+     */
+    public void publishToTopic(String destination, Object payload) {
+        send(destination, payload);
+    }
+
     private void send(String destination, Object payload) {
         try {
             messagingTemplate.convertAndSend(destination, payload);
