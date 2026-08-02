@@ -125,6 +125,16 @@
             <artifactId>caffeine</artifactId>
         </dependency>
 
+        <!-- Mail + Thymeleaf — transactional email (NOTIF-03) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+
         <!-- WebSocket / STOMP — cover and delegation events (COVER-07) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

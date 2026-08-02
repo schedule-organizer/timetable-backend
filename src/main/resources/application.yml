@@ -11,6 +11,15 @@ spring:
     username: sa
     password:
 
+  # NOTIF-03: SMTP is opt-in. With SMTP_HOST unset, StubEmailService logs instead of sending,
+  # so tests and offline development need no mail server.
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:1025}
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+
   jackson:
     serialization:
       write-dates-as-timestamps: false
@@ -44,6 +53,11 @@ management:
       show-details: never
 
 app:
+  mail:
+    # Off by default: StubEmailService logs instead of sending. Set MAIL_ENABLED=true with a real
+    # SMTP_HOST (MailHog locally) to activate SmtpEmailService.
+    enabled: ${MAIL_ENABLED:false}
+    from: ${SMTP_FROM:no-reply@schediflow.local}
   jwt:
     # Loaded from JWT_SECRET env var. Must be a Base64-encoded key >= 32 bytes.
     # The default below is for local dev only — always override in staging/prod.
