@@ -24,6 +24,13 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
 
     List<Lesson> findByTenantIdAndTeacherUserId(Long tenantId, Long teacherUserId);
 
+    /** Everything already scheduled in one slot of one timetable — the input to conflict detection. */
+    List<Lesson> findByTenantIdAndTimetableIdAndScheduledDateAndSchedulePeriodId(
+            Long tenantId, Long timetableId, LocalDate scheduledDate, Long schedulePeriodId);
+
+    List<Lesson> findByTenantIdAndTimetableIdOrderByScheduledDateAscSchedulePeriodIdAsc(
+            Long tenantId, Long timetableId);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("delete from Lesson l where l.timetableId = :timetableId and l.tenantId = :tenantId")
     int deleteByTimetableIdAndTenantId(

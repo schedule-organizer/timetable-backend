@@ -17,4 +17,7 @@ public interface ForbiddenSlotRepository extends JpaRepository<ForbiddenSlot, Lo
 
     List<ForbiddenSlot> findByTenantIdAndEntityTypeAndSchedulePeriodId(
             Long tenantId, String entityType, Long schedulePeriodId);
+
+    /** Every forbidden slot on one period, across all entity types (SCHED-11). */
+    List<ForbiddenSlot> findByTenantIdAndSchedulePeriodId(Long tenantId, Long schedulePeriodId);
 }
