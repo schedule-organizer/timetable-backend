@@ -21,8 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Detects scheduling conflicts.
@@ -100,6 +103,20 @@ public class ConflictDetectionService {
                 lessonRepository.findByTenantIdAndTimetableIdAndScheduledDateAndSchedulePeriodId(
                         tenantId, lesson.getTimetableId(), lesson.getScheduledDate(), periodId);
 
+        collectOccupancyConflicts(lesson, occupants, roomId, violations);
+        checkRoomCapacity(tenantId, lesson, roomId, violations);
+        applyForbiddenSlots(
+                tenantId,
+                lesson,
+                roomId,
+                forbiddenSlotRepository.findByTenantIdAndSchedulePeriodId(tenantId, periodId),
+                violations);
+        return violations;
+    }
+
+    /** Who else is in the slot, and does any of it clash with this lesson? */
+    private static void collectOccupancyConflicts(
+            Lesson lesson, List<Lesson> occupants, Long roomId, List<ConflictViolation> violations) {
         for (Lesson other : occupants) {
             if (Objects.equals(other.getId(), lesson.getId())) {
                 continue;
@@ -123,16 +140,64 @@ public class ConflictDetectionService {
                         other.getId()));
             }
         }
-
-        checkRoomCapacity(tenantId, lesson, roomId, violations);
-        checkForbiddenSlots(tenantId, lesson, periodId, roomId, violations);
-        return violations;
     }
 
     /** Convenience for callers that only need a yes/no, such as the grid's {@code hasConflict} flag. */
     @Transactional(readOnly = true)
     public boolean hasConflict(Lesson lesson) {
         return !checkConflicts(lesson, null, null).isEmpty();
+    }
+
+    /**
+     * Conflict flags for an entire timetable in one pass (SCHED-02).
+     *
+     * <p>Calling {@link #checkConflicts} per lesson would be N queries; this loads every lesson and
+     * every forbidden slot once and reuses the same comparison rules, so the grid flag can never
+     * disagree with what a move or swap would report.</p>
+     *
+     * @return lesson id → whether that lesson currently conflicts
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, Boolean> hasConflictByLessonId(Long tenantId, Long timetableId) {
+        List<Lesson> lessons =
+                lessonRepository.findByTenantIdAndTimetableIdOrderByScheduledDateAscSchedulePeriodIdAsc(
+                        tenantId, timetableId);
+        if (lessons.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<SlotKey, List<Lesson>> bySlot = lessons.stream()
+                .collect(Collectors.groupingBy(SlotKey::of));
+        Map<Long, List<ForbiddenSlot>> forbiddenByPeriod = bySlot.keySet().stream()
+                .map(SlotKey::schedulePeriodId)
+                .distinct()
+                .collect(Collectors.toMap(
+                        periodId -> periodId,
+                        periodId -> forbiddenSlotRepository.findByTenantIdAndSchedulePeriodId(tenantId, periodId)));
+
+        Map<Long, Boolean> result = new HashMap<>();
+        for (Lesson lesson : lessons) {
+            List<ConflictViolation> violations = new ArrayList<>();
+            collectOccupancyConflicts(
+                    lesson, bySlot.getOrDefault(SlotKey.of(lesson), List.of()), lesson.getRoomId(), violations);
+            checkRoomCapacity(tenantId, lesson, lesson.getRoomId(), violations);
+            applyForbiddenSlots(
+                    tenantId,
+                    lesson,
+                    lesson.getRoomId(),
+                    forbiddenByPeriod.getOrDefault(lesson.getSchedulePeriodId(), List.of()),
+                    violations);
+            result.put(lesson.getId(), !violations.isEmpty());
+        }
+        return result;
+    }
+
+    /** A lesson's position in the week — the unit that can only hold one teacher, class or room. */
+    private record SlotKey(LocalDate scheduledDate, Long schedulePeriodId) {
+
+        static SlotKey of(Lesson lesson) {
+            return new SlotKey(lesson.getScheduledDate(), lesson.getSchedulePeriodId());
+        }
     }
 
     private void checkRoomCapacity(
@@ -157,11 +222,13 @@ public class ConflictDetectionService {
         }
     }
 
-    private void checkForbiddenSlots(
-            Long tenantId, Lesson lesson, Long periodId, Long roomId, List<ConflictViolation> violations) {
+    private void applyForbiddenSlots(
+            Long tenantId,
+            Lesson lesson,
+            Long roomId,
+            List<ForbiddenSlot> slots,
+            List<ConflictViolation> violations) {
 
-        List<ForbiddenSlot> slots =
-                forbiddenSlotRepository.findByTenantIdAndSchedulePeriodId(tenantId, periodId);
         if (slots.isEmpty()) {
             return;
         }

@@ -2,6 +2,7 @@ package com.schediflow.repository;
 
 import com.schediflow.domain.Lesson;
 import com.schediflow.dto.response.HolidayLessonConflictResponse;
+import com.schediflow.dto.response.TimetableLessonRow;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -30,6 +31,35 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
 
     List<Lesson> findByTenantIdAndTimetableIdOrderByScheduledDateAscSchedulePeriodIdAsc(
             Long tenantId, Long timetableId);
+
+    /**
+     * The whole grid in one joined query (SCHED-02). Room is an outer join because a lesson may be
+     * unroomed; the optional filters are applied with an "or the filter is null" guard so a single
+     * query covers every combination.
+     */
+    @Query("""
+            select new com.schediflow.dto.response.TimetableLessonRow(
+                l.id, s.name, coalesce(t.displayName, u.displayName, u.email), r.name,
+                l.schedulePeriodId, l.scheduledDate, l.pinned,
+                l.teacherUserId, l.classId, l.roomId)
+            from Lesson l
+            join Subject s on s.id = l.subjectId and s.tenantId = l.tenantId
+            join User u on u.id = l.teacherUserId and u.tenantId = l.tenantId
+            left join Teacher t on t.userId = l.teacherUserId and t.tenantId = l.tenantId
+            left join Room r on r.id = l.roomId and r.tenantId = l.tenantId
+            where l.tenantId = :tenantId
+              and l.timetableId = :timetableId
+              and (:teacherUserId is null or l.teacherUserId = :teacherUserId)
+              and (:classId is null or l.classId = :classId)
+              and (:roomId is null or l.roomId = :roomId)
+            order by l.scheduledDate asc, l.schedulePeriodId asc, l.id asc
+            """)
+    List<TimetableLessonRow> findGridRows(
+            @Param("tenantId") Long tenantId,
+            @Param("timetableId") Long timetableId,
+            @Param("teacherUserId") Long teacherUserId,
+            @Param("classId") Long classId,
+            @Param("roomId") Long roomId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("delete from Lesson l where l.timetableId = :timetableId and l.tenantId = :tenantId")

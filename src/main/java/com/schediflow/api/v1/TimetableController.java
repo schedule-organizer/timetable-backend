@@ -2,7 +2,9 @@ package com.schediflow.api.v1;
 
 import com.schediflow.dto.request.TimetableRequest;
 import com.schediflow.dto.request.TimetableStatusRequest;
+import com.schediflow.dto.response.TimetableLessonResponse;
 import com.schediflow.dto.response.TimetableResponse;
+import com.schediflow.service.TimetableGridService;
 import com.schediflow.service.TimetableService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -21,9 +23,29 @@ import java.util.List;
 public class TimetableController {
 
     private final TimetableService timetableService;
+    private final TimetableGridService timetableGridService;
 
-    public TimetableController(TimetableService timetableService) {
+    public TimetableController(
+            TimetableService timetableService, TimetableGridService timetableGridService) {
         this.timetableService = timetableService;
+        this.timetableGridService = timetableGridService;
+    }
+
+    /**
+     * Every lesson in the timetable, ready for grid rendering. Readable by all authenticated roles.
+     *
+     * <p>Filters are optional and combine. {@code teacherId} is a {@code teachers.id}, matching the
+     * rest of the API.</p>
+     *
+     * @return 200 with the lessons; 404 if the timetable is not in the tenant
+     */
+    @GetMapping("/{id}/lessons")
+    public ResponseEntity<List<TimetableLessonResponse>> lessons(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long teacherId,
+            @RequestParam(required = false) Long classId,
+            @RequestParam(required = false) Long roomId) {
+        return ResponseEntity.ok(timetableGridService.getLessons(id, teacherId, classId, roomId));
     }
 
     /**
