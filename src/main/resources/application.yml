@@ -62,6 +62,12 @@ app:
     api-key: ${CALENDARIFIC_API_KEY:}
     base-url: ${CALENDARIFIC_BASE_URL:https://calendarific.com/api/v2}
 
+# Timefold needs a default bound; SCHED-03 overrides it per job from the requested mode.
+timefold:
+  solver:
+    termination:
+      spent-limit: 30s
+
 springdoc:
   api-docs:
     path: /v3/api-docs       # OpenAPI JSON spec

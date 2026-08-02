@@ -40,6 +40,19 @@ public class Lesson {
     @Column(name = "scheduled_date", nullable = false)
     private LocalDate scheduledDate;
 
+    /** Nullable — the solver may leave a lesson unroomed, and not every subject needs a room. */
+    @Column(name = "room_id")
+    private Long roomId;
+
+    /** Pinned lessons are excluded from solver re-scheduling (SCHED-09). */
+    @Column(name = "is_pinned", nullable = false)
+    private boolean pinned;
+
+    /** Optimistic lock guarding concurrent drag-and-drop edits (SCHED-08). */
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -108,6 +121,26 @@ public class Lesson {
 
     public void setScheduledDate(LocalDate scheduledDate) {
         this.scheduledDate = scheduledDate;
+    }
+
+    public Long getRoomId() {
+        return roomId;
+    }
+
+    public void setRoomId(Long roomId) {
+        this.roomId = roomId;
+    }
+
+    public boolean isPinned() {
+        return pinned;
+    }
+
+    public void setPinned(boolean pinned) {
+        this.pinned = pinned;
+    }
+
+    public Long getVersion() {
+        return version;
     }
 
     public OffsetDateTime getCreatedAt() {

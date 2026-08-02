@@ -17,5 +17,7 @@ public interface TeacherQualificationRepository extends JpaRepository<TeacherQua
 
     List<TeacherQualification> findByTenantIdAndSubjectId(Long tenantId, Long subjectId);
 
+    List<TeacherQualification> findByTenantId(Long tenantId);
+
     List<TeacherQualification> findByTenantIdAndTeacherIdIn(Long tenantId, Collection<Long> teacherIds);
 }

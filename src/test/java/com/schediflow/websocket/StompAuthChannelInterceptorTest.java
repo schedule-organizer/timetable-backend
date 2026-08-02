@@ -1,5 +1,9 @@
 package com.schediflow.websocket;
 
+import com.schediflow.domain.Timetable;
+import com.schediflow.domain.SolverJob;
+import com.schediflow.repository.SolverJobRepository;
+import com.schediflow.repository.TimetableRepository;
 import com.schediflow.security.JwtPrincipal;
 import com.schediflow.security.JwtTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,12 +25,17 @@ class StompAuthChannelInterceptorTest {
     private static final String SECRET = "dGVzdC1zZWNyZXQtdGhhdC1pcy1sb25nLWVub3VnaC0zMi1ieXRlcw==";
 
     private JwtTokenProvider jwtTokenProvider;
+    private TimetableRepository timetableRepository;
+    private SolverJobRepository solverJobRepository;
     private StompAuthChannelInterceptor interceptor;
 
     @BeforeEach
     void setUp() {
         jwtTokenProvider = new JwtTokenProvider(SECRET, 900_000L);
-        interceptor = new StompAuthChannelInterceptor(jwtTokenProvider);
+        timetableRepository = org.mockito.Mockito.mock(TimetableRepository.class);
+        solverJobRepository = org.mockito.Mockito.mock(SolverJobRepository.class);
+        interceptor = new StompAuthChannelInterceptor(
+                jwtTokenProvider, timetableRepository, solverJobRepository);
     }
 
     // ---------- CONNECT ----------
@@ -146,6 +155,50 @@ class StompAuthChannelInterceptorTest {
         assertThatThrownBy(() -> interceptor.preSend(message, null))
                 .isInstanceOf(MessagingAuthenticationException.class)
                 .hasMessageContaining("Not authenticated");
+    }
+
+    @Test
+    void subscribe_toATimetableInOwnTenant_isAllowed() {
+        org.mockito.Mockito.when(timetableRepository.findByIdAndTenantId(9L, 3L))
+                .thenReturn(java.util.Optional.of(new Timetable()));
+        Message<?> message = subscribeMessage(authenticated(7L, 3L), "/topic/timetable/9");
+
+        assertThat(interceptor.preSend(message, null)).isNotNull();
+    }
+
+    @Test
+    void subscribe_toATimetableInAnotherTenant_isRejected() {
+        org.mockito.Mockito.when(timetableRepository.findByIdAndTenantId(9L, 3L))
+                .thenReturn(java.util.Optional.empty());
+        Message<?> message = subscribeMessage(authenticated(7L, 3L), "/topic/timetable/9");
+
+        assertThatThrownBy(() -> interceptor.preSend(message, null))
+                .isInstanceOf(MessagingAuthenticationException.class)
+                .hasMessageContaining("outside your institution");
+    }
+
+    @Test
+    void subscribe_toASolverJobInOwnTenant_isAllowed() {
+        org.mockito.Mockito.when(solverJobRepository.findByIdAndTenantId(4L, 3L))
+                .thenReturn(java.util.Optional.of(new SolverJob()));
+
+        assertThat(interceptor.preSend(
+                        subscribeMessage(authenticated(7L, 3L), "/topic/solver/4/progress"), null))
+                .isNotNull();
+        assertThat(interceptor.preSend(
+                        subscribeMessage(authenticated(7L, 3L), "/topic/solver/4/complete"), null))
+                .isNotNull();
+    }
+
+    @Test
+    void subscribe_toASolverJobInAnotherTenant_isRejected() {
+        org.mockito.Mockito.when(solverJobRepository.findByIdAndTenantId(4L, 3L))
+                .thenReturn(java.util.Optional.empty());
+
+        assertThatThrownBy(() -> interceptor.preSend(
+                        subscribeMessage(authenticated(7L, 3L), "/topic/solver/4/progress"), null))
+                .isInstanceOf(MessagingAuthenticationException.class)
+                .hasMessageContaining("outside your institution");
     }
 
     @Test

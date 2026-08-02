@@ -32,6 +32,14 @@ public class Timetable {
     @Column(nullable = false, length = 32)
     private String status;
 
+    /** When the timetable actually went live (SCHED-07). */
+    @Column(name = "published_at")
+    private OffsetDateTime publishedAt;
+
+    /** Requested future publication time, swept by TimetablePublishJob. */
+    @Column(name = "publish_at")
+    private OffsetDateTime publishAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -84,6 +92,22 @@ public class Timetable {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public OffsetDateTime getPublishedAt() {
+        return publishedAt;
+    }
+
+    public void setPublishedAt(OffsetDateTime publishedAt) {
+        this.publishedAt = publishedAt;
+    }
+
+    public OffsetDateTime getPublishAt() {
+        return publishAt;
+    }
+
+    public void setPublishAt(OffsetDateTime publishAt) {
+        this.publishAt = publishAt;
     }
 
     public OffsetDateTime getCreatedAt() {

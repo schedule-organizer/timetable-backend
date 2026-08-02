@@ -1,6 +1,7 @@
 package com.schediflow.solver.model;
 
 import ai.timefold.solver.core.api.domain.entity.PlanningEntity;
+import ai.timefold.solver.core.api.domain.entity.PlanningPin;
 import ai.timefold.solver.core.api.domain.lookup.PlanningId;
 import ai.timefold.solver.core.api.domain.variable.PlanningVariable;
 
@@ -20,6 +21,10 @@ public class Lesson {
 
     /** When set, lessons of groups sharing an {@link OptionBlockMembership} must land on the same slot. */
     private Long teachingGroupId;
+
+    /** SCHED-09: a pinned lesson keeps its slot; the solver may not move it. */
+    @PlanningPin
+    private boolean pinned;
 
     @PlanningVariable(valueRangeProviderRefs = "timeslotRange")
     private PeriodSlot periodSlot;
@@ -62,6 +67,14 @@ public class Lesson {
 
     public void setSubjectId(Long subjectId) {
         this.subjectId = subjectId;
+    }
+
+    public boolean isPinned() {
+        return pinned;
+    }
+
+    public void setPinned(boolean pinned) {
+        this.pinned = pinned;
     }
 
     public Long getTeachingGroupId() {
