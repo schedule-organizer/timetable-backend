@@ -42,6 +42,15 @@ public class SolverJob {
     @Column(name = "error_message", length = 1000)
     private String errorMessage;
 
+    @Column(name = "scope_description", length = 500)
+    private String scopeDescription;
+
+    @Column(name = "eligible_lessons")
+    private Integer eligibleLessons;
+
+    @Column(name = "frozen_lessons")
+    private Integer frozenLessons;
+
     @Column(name = "requested_by")
     private Long requestedBy;
 
@@ -89,6 +98,15 @@ public class SolverJob {
 
     public String getErrorMessage() { return errorMessage; }
     public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+
+    public String getScopeDescription() { return scopeDescription; }
+    public void setScopeDescription(String scopeDescription) { this.scopeDescription = scopeDescription; }
+
+    public Integer getEligibleLessons() { return eligibleLessons; }
+    public void setEligibleLessons(Integer eligibleLessons) { this.eligibleLessons = eligibleLessons; }
+
+    public Integer getFrozenLessons() { return frozenLessons; }
+    public void setFrozenLessons(Integer frozenLessons) { this.frozenLessons = frozenLessons; }
 
     public Long getRequestedBy() { return requestedBy; }
     public void setRequestedBy(Long requestedBy) { this.requestedBy = requestedBy; }

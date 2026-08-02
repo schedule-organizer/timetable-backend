@@ -10,6 +10,7 @@ import com.schediflow.domain.SolverJobStatus;
 import com.schediflow.domain.SolverMode;
 import com.schediflow.domain.Timetable;
 import com.schediflow.dto.request.SolverRunRequest;
+import com.schediflow.dto.request.SolverScope;
 import com.schediflow.dto.response.SolverJobResponse;
 import com.schediflow.exception.BadRequestException;
 import com.schediflow.exception.ConflictException;
@@ -95,6 +96,7 @@ public class SolverService {
 
         SolverMode mode = parseMode(req.mode());
         int timeoutSeconds = resolveTimeout(mode, req.timeoutSeconds());
+        SolverScope scope = validateScope(req.scope());
 
         SolverJob job = new SolverJob();
         job.setTenantId(tenantId);
@@ -103,9 +105,16 @@ public class SolverService {
         job.setMode(mode.name());
         job.setTimeoutSeconds(timeoutSeconds);
         job.setRequestedBy(principal == null ? null : principal.userId());
+        job.setScopeDescription(describeScope(scope));
         SolverJob saved = solverJobRepository.save(job);
 
-        TimetableSolution problem = problemBuilder.build(timetable);
+        TimetableSolution problem = problemBuilder.build(timetable, scope);
+        // "No silent change" is auditable: record how many lessons the run could and could not move.
+        long frozen = problem.getLessons().stream()
+                .filter(com.schediflow.solver.model.Lesson::isPinned)
+                .count();
+        saved.setEligibleLessons((int) (problem.getLessons().size() - frozen));
+        saved.setFrozenLessons((int) frozen);
         if (problem.getLessons().isEmpty()) {
             // Nothing to arrange — finish here rather than starting a solver that cannot move.
             // Written in this transaction, not via the writer, because the row is not yet visible
@@ -203,6 +212,40 @@ public class SolverService {
         return toResponse(solverJobRepository.save(job));
     }
 
+    /** A scope that names nothing at all is a mistake, not "everything" — reject it. */
+    private static SolverScope validateScope(SolverScope scope) {
+        if (scope == null) {
+            return null;
+        }
+        if (scope.isEmpty()) {
+            throw new BadRequestException(
+                    "scope must name at least one of teacherIds, classIds or roomIds");
+        }
+        return scope;
+    }
+
+    private static String describeScope(SolverScope scope) {
+        if (scope == null) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        appendIds(sb, "teachers", scope.teacherIds());
+        appendIds(sb, "classes", scope.classIds());
+        appendIds(sb, "rooms", scope.roomIds());
+        String text = sb.toString();
+        return text.length() > 500 ? text.substring(0, 500) : text;
+    }
+
+    private static void appendIds(StringBuilder sb, String label, List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        if (!sb.isEmpty()) {
+            sb.append("; ");
+        }
+        sb.append(label).append("=").append(ids);
+    }
+
     static SolverMode parseMode(String raw) {
         if (raw == null || raw.isBlank()) {
             return SolverMode.BALANCED;
@@ -239,6 +282,9 @@ public class SolverService {
                 job.getSoftScore(),
                 job.getScoreBreakdown(),
                 job.getErrorMessage(),
+                job.getScopeDescription(),
+                job.getEligibleLessons(),
+                job.getFrozenLessons(),
                 job.getStartedAt(),
                 job.getCompletedAt());
     }

@@ -5,6 +5,7 @@ import com.schediflow.domain.SchedulePeriod;
 import com.schediflow.domain.Teacher;
 import com.schediflow.domain.TeacherQualification;
 import com.schediflow.domain.Timetable;
+import com.schediflow.dto.request.SolverScope;
 import com.schediflow.repository.HolidayDateRepository;
 import com.schediflow.repository.LessonRepository;
 import com.schediflow.repository.SchedulePeriodRepository;
@@ -62,6 +63,15 @@ public class SolverProblemBuilder {
 
     @Transactional(readOnly = true)
     public TimetableSolution build(Timetable timetable) {
+        return build(timetable, null);
+    }
+
+    /**
+     * @param scope when non-null, only lessons it matches may move; everything else is pinned so a
+     *              targeted run cannot silently disturb the rest of the timetable (SCHED-14)
+     */
+    @Transactional(readOnly = true)
+    public TimetableSolution build(Timetable timetable, SolverScope scope) {
         Long tenantId = timetable.getTenantId();
         List<com.schediflow.domain.Lesson> persisted =
                 lessonRepository.findByTenantIdAndTimetableIdOrderByScheduledDateAscSchedulePeriodIdAsc(
@@ -98,7 +108,8 @@ public class SolverProblemBuilder {
             lesson.setId(row.getId());
             lesson.setTeacherUserId(row.getTeacherUserId());
             lesson.setSubjectId(row.getSubjectId());
-            lesson.setPinned(row.isPinned());
+            // A lesson is frozen if it was pinned by hand, or if a scope excludes it.
+            lesson.setPinned(row.isPinned() || !inScope(scope, row));
             lesson.setPeriodSlot(
                     slotByKey.get(slotKey(row.getScheduledDate(), row.getSchedulePeriodId())));
             planningLessons.add(lesson);
@@ -154,6 +165,20 @@ public class SolverProblemBuilder {
             }
         }
         return facts;
+    }
+
+    /** No scope means everything is movable; otherwise any matching dimension puts a lesson in scope. */
+    public static boolean inScope(SolverScope scope, com.schediflow.domain.Lesson lesson) {
+        if (scope == null || scope.isEmpty()) {
+            return true;
+        }
+        return contains(scope.teacherIds(), lesson.getTeacherUserId())
+                || contains(scope.classIds(), lesson.getClassId())
+                || contains(scope.roomIds(), lesson.getRoomId());
+    }
+
+    private static boolean contains(List<Long> ids, Long value) {
+        return ids != null && value != null && ids.contains(value);
     }
 
     private static long slotKey(LocalDate date, Long periodId) {

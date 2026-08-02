@@ -16,6 +16,9 @@ public record SolverJobResponse(
         Integer softScore,
         String scoreBreakdown,
         String errorMessage,
+        String scopeDescription,
+        Integer eligibleLessons,
+        Integer frozenLessons,
         OffsetDateTime startedAt,
         OffsetDateTime completedAt
 ) {}
