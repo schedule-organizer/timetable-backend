@@ -56,6 +56,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/complete-registration").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/settings/public").permitAll()
+                // TMPL-02: the onboarding UI offers built-in templates before an account exists.
+                // With no tenant in context the service returns built-ins only.
+                .requestMatchers(HttpMethod.GET, "/api/v1/templates").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
                 // The STOMP handshake carries no Authorization header; the CONNECT frame is
                 // authenticated by StompAuthChannelInterceptor instead.
