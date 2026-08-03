@@ -1,5 +1,15 @@
 # Deferred work
 
+## Deferred from: implementation of Epic 9 EXPORT-01…EXPORT-08 (2026-08-03)
+
+- **EXPORT-04 does not exist.** There is no `9.export-04.md` and no entry in `sprint-status.yaml` — a gap in the original story numbering, not a skipped story. Worth confirming nothing was lost when Epic 9 was planned.
+- **CSV export is not truly streamed.** The story suggests streaming to bound memory, but the rows are loaded up front so a missing timetable is a clean 404 rather than a half-written 200, and an async `StreamingResponseBody` collides with the Spring Security filter chain. True end-to-end streaming needs a cursor-based repository read plus a filter-chain exclusion; revisit if a school's timetable ever outgrows a single response buffer.
+- **iCal exports a teacher's schedule, not a class's.** EXPORT-03's description mentions "a teacher or student's lessons", but its own `userId` parameter only expresses the teacher case. A class-scoped feed needs a different parameter and a decision about what a student-facing calendar contains.
+- **PDF layout is functional, not designed.** Flying Saucer renders a plain periods × days grid (TD-05 resolved in its favour). If the printed output ever needs to match a school's house style, that is when headless Chrome earns its complexity.
+- **Audit coverage is three methods.** `@Audited` is applied to timetable publish, checkpoint restore and draft deletion. Everything else — cover assignment, delegation decisions, resource CRUD, CSV import — is unaudited. Extending is one annotation per method; deciding *what* must be auditable is a compliance question, not a technical one.
+- **Audit details are a summary, not a diff.** The trail records which method ran, by whom, against which entity — not what changed. Before/after values would need either entity snapshots or Hibernate Envers.
+- **Reports assume the timetable spans its whole cycle.** Room utilization derives the denominator from the distinct dates the lessons occupy. A partially filled timetable therefore reports optimistic occupancy, because unscheduled days are not counted as available.
+
 ## Deferred from: implementation of Epic 6 SCHED-01…SCHED-14 (2026-08-02)
 
 ### Scope gaps — features nothing currently provides

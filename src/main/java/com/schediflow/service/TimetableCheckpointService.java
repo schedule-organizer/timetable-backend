@@ -15,7 +15,10 @@ import com.schediflow.repository.TimetableCheckpointLessonRepository;
 import com.schediflow.repository.TimetableCheckpointRepository;
 import com.schediflow.repository.TimetableRepository;
 import com.schediflow.security.JwtPrincipal;
+import com.schediflow.dto.event.LessonUpdatedEvent;
 import com.schediflow.security.TenantContext;
+import com.schediflow.websocket.WebSocketDestinations;
+import com.schediflow.websocket.WebSocketEventPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,6 +44,7 @@ public class TimetableCheckpointService {
     private final TimetableCheckpointRepository checkpointRepository;
     private final TimetableCheckpointLessonRepository checkpointLessonRepository;
     private final LessonRepository lessonRepository;
+    private final WebSocketEventPublisher eventPublisher;
     private final int maxCheckpointsPerTimetable;
 
     public TimetableCheckpointService(
@@ -48,11 +52,13 @@ public class TimetableCheckpointService {
             TimetableCheckpointRepository checkpointRepository,
             TimetableCheckpointLessonRepository checkpointLessonRepository,
             LessonRepository lessonRepository,
+            WebSocketEventPublisher eventPublisher,
             @Value("${app.timetables.max-checkpoints:10}") int maxCheckpointsPerTimetable) {
         this.timetableRepository = timetableRepository;
         this.checkpointRepository = checkpointRepository;
         this.checkpointLessonRepository = checkpointLessonRepository;
         this.lessonRepository = lessonRepository;
+        this.eventPublisher = eventPublisher;
         this.maxCheckpointsPerTimetable = maxCheckpointsPerTimetable;
     }
 
@@ -127,6 +133,7 @@ public class TimetableCheckpointService {
                 .orElseThrow(() -> new ResourceNotFoundException("Checkpoint not found: " + checkpointId));
 
         lessonRepository.deleteByTimetableIdAndTenantId(timetable.getId(), tenantId);
+        List<Lesson> restored = new java.util.ArrayList<>();
         for (TimetableCheckpointLesson snapshot :
                 checkpointLessonRepository.findByCheckpointIdOrderByIdAsc(checkpoint.getId())) {
             Lesson lesson = new Lesson();
@@ -139,7 +146,22 @@ public class TimetableCheckpointService {
             lesson.setSchedulePeriodId(snapshot.getSchedulePeriodId());
             lesson.setScheduledDate(snapshot.getScheduledDate());
             lesson.setPinned(snapshot.isPinned());
-            lessonRepository.save(lesson);
+            restored.add(lessonRepository.save(lesson));
+        }
+
+        // A restore rewrites the whole grid; without this an open grid would keep showing the
+        // pre-restore state until someone reloaded it (SCHED-12).
+        for (Lesson lesson : restored) {
+            eventPublisher.publishToTopic(
+                    WebSocketDestinations.timetableTopic(timetable.getId()),
+                    new LessonUpdatedEvent(
+                            lesson.getId(),
+                            timetable.getId(),
+                            lesson.getSchedulePeriodId(),
+                            lesson.getRoomId(),
+                            null,
+                            lesson.isPinned(),
+                            false));
         }
 
         log.info(

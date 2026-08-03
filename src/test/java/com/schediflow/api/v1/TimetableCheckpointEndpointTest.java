@@ -23,6 +23,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(properties = {"app.ratelimit.max-requests=500", "app.timetables.max-checkpoints=3"})
 class TimetableCheckpointEndpointTest extends AbstractEndpointTest {
 
+    @org.springframework.boot.test.mock.mockito.SpyBean
+    com.schediflow.websocket.WebSocketEventPublisher eventPublisher;
+
     private static final LocalDate MONDAY = LocalDate.of(2026, 9, 7);
 
     private String adminToken;
@@ -93,6 +96,24 @@ class TimetableCheckpointEndpointTest extends AbstractEndpointTest {
         Long period = jdbcTemplate.queryForObject(
                 "SELECT schedule_period_id FROM lessons WHERE timetable_id = ?", Long.class, timetableId);
         assertThat(period).isEqualTo(periods.get(0));
+    }
+
+    @Test
+    void restore_broadcastsLessonUpdatedSoOpenGridsRefresh() throws Exception {
+        lesson(periods.get(0));
+        lesson(periods.get(1));
+        long checkpointId = createdId(mockMvc.perform(create(adminToken, "Snapshot"))
+                .andExpect(status().isCreated()).andReturn());
+
+        org.mockito.Mockito.clearInvocations(eventPublisher);
+        mockMvc.perform(post(url() + "/" + checkpointId + "/restore")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+
+        org.mockito.Mockito.verify(eventPublisher, org.mockito.Mockito.times(2))
+                .publishToTopic(
+                        org.mockito.ArgumentMatchers.eq("/topic/timetable/" + timetableId),
+                        org.mockito.ArgumentMatchers.any());
     }
 
     @Test
