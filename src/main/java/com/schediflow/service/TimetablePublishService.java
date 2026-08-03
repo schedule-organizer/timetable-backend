@@ -1,5 +1,6 @@
 package com.schediflow.service;
 
+import com.schediflow.audit.Audited;
 import com.schediflow.domain.Term;
 import com.schediflow.domain.Timetable;
 import com.schediflow.domain.User;
@@ -60,6 +61,7 @@ public class TimetablePublishService {
      * @return the timetable; 400 if it still has hard violations or is not a DRAFT
      */
     @Transactional
+    @Audited(action = "PUBLISH", entityType = "Timetable")
     public TimetableResponse publish(Long timetableId, TimetablePublishRequest req) {
         Long tenantId = TenantContext.getTenantId();
         Timetable timetable = timetableRepository

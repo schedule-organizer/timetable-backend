@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <style>
+    @page { size: A4 landscape; margin: 14mm; }
+    body { font-family: sans-serif; font-size: 9pt; color: #111; }
+    h1 { font-size: 15pt; margin: 0 0 2mm 0; }
+    .meta { color: #555; font-size: 9pt; margin-bottom: 5mm; }
+    h2 { font-size: 11pt; margin: 6mm 0 2mm 0; page-break-after: avoid; }
+    table { width: 100%; border-collapse: collapse; page-break-inside: avoid; }
+    th, td { border: 0.5pt solid #999; padding: 1.6mm; vertical-align: top; }
+    th { background: #eee; font-weight: bold; text-align: left; }
+    td.period { background: #f6f6f6; font-weight: bold; white-space: nowrap; width: 22mm; }
+    .lesson { display: block; }
+  </style>
+</head>
+<body>
+  <h1 th:text="${schoolName}">School</h1>
+  <div class="meta">
+    <span th:text="${timetableName}">Timetable</span>
+    <span th:if="${termRange != null}"> — <span th:text="${termRange}">term</span></span>
+    · <span th:text="${view}">CLASS</span> view
+  </div>
+
+  <div th:if="${grid.isEmpty()}">
+    <p>This timetable has no lessons.</p>
+  </div>
+
+  <div th:each="group : ${grid}">
+    <h2 th:text="${group.key}">Group</h2>
+    <table>
+      <tr>
+        <th>Period</th>
+        <th th:each="day : ${days}" th:text="'Day ' + ${day}">Day</th>
+      </tr>
+      <tr th:each="periodName : ${periodNames}">
+        <td class="period" th:text="${periodName}">Period</td>
+        <td th:each="day : ${days}">
+          <span class="lesson"
+                th:each="line : ${group.value.containsKey(periodName) and group.value.get(periodName).containsKey(day)
+                                 ? group.value.get(periodName).get(day) : {}}"
+                th:text="${line}">lesson</span>
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>

@@ -90,6 +90,13 @@ class GlobalExceptionHandlerTest {
     @RestController
     static class TestController {
 
+        @GetMapping("/test/optimistic-lock")
+        public String optimisticLock() {
+            throw new org.springframework.orm.ObjectOptimisticLockingFailureException(
+                    Object.class, 1L);
+        }
+
+
         @GetMapping("/test/not-found")
         void notFound() { throw new ResourceNotFoundException("Resource not found"); }
 
@@ -106,5 +113,14 @@ class GlobalExceptionHandlerTest {
         void error() { throw new RuntimeException("boom"); }
 
         record Payload(@NotBlank String name) {}
+    }
+
+    @Test
+    void optimisticLockFailure_returns409NotAGeneric500() throws Exception {
+        mockMvc.perform(get("/test/optimistic-lock"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.message")
+                        .value(org.hamcrest.Matchers.containsString("changed by someone else")));
     }
 }

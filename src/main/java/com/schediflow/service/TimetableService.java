@@ -1,5 +1,6 @@
 package com.schediflow.service;
 
+import com.schediflow.audit.Audited;
 import com.schediflow.domain.BellSchedule;
 import com.schediflow.domain.Timetable;
 import com.schediflow.domain.TimetableStatus;
@@ -129,6 +130,7 @@ public class TimetableService {
 
     /** Only DRAFT timetables may be removed; published or archived history is preserved. */
     @Transactional
+    @Audited(action = "DELETE", entityType = "Timetable")
     public void delete(Long id) {
         Long tenantId = TenantContext.getTenantId();
         Timetable timetable = findOrThrow(id);

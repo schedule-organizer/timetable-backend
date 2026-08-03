@@ -2,6 +2,7 @@ package com.schediflow.repository;
 
 import com.schediflow.domain.Lesson;
 import com.schediflow.dto.response.HolidayLessonConflictResponse;
+import com.schediflow.dto.response.TimetableExportRow;
 import com.schediflow.dto.response.TimetableLessonRow;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -60,6 +61,32 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
             @Param("teacherUserId") Long teacherUserId,
             @Param("classId") Long classId,
             @Param("roomId") Long roomId);
+
+    /**
+     * Every lesson of a timetable with its names and period times resolved, ordered the way an
+     * export reads: by day, then by the period's ordinal (EXPORT-01/02/03).
+     *
+     * <p>Ordered by ordinal rather than period *name* — names like "Period 10" and "Period 2" sort
+     * wrongly as text, and ordinal is the bell schedule's own sequence.</p>
+     */
+    @Query("""
+            select new com.schediflow.dto.response.TimetableExportRow(
+                l.id, s.name, coalesce(t.displayName, u.displayName, u.email), r.name, sc.name,
+                l.scheduledDate, p.name, p.ordinal, p.startTime, p.endTime,
+                l.teacherUserId, l.classId, l.roomId)
+            from Lesson l
+            join Subject s on s.id = l.subjectId and s.tenantId = l.tenantId
+            join SchoolClass sc on sc.id = l.classId and sc.tenantId = l.tenantId
+            join User u on u.id = l.teacherUserId and u.tenantId = l.tenantId
+            join SchedulePeriod p on p.id = l.schedulePeriodId
+            left join Teacher t on t.userId = l.teacherUserId and t.tenantId = l.tenantId
+            left join Room r on r.id = l.roomId and r.tenantId = l.tenantId
+            where l.tenantId = :tenantId
+              and l.timetableId = :timetableId
+            order by l.scheduledDate asc, p.ordinal asc, sc.name asc
+            """)
+    List<TimetableExportRow> findExportRows(
+            @Param("tenantId") Long tenantId, @Param("timetableId") Long timetableId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("delete from Lesson l where l.timetableId = :timetableId and l.tenantId = :tenantId")
