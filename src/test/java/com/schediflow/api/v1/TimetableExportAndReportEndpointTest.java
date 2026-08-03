@@ -123,6 +123,85 @@ class TimetableExportAndReportEndpointTest extends AbstractEndpointTest {
                 .andExpect(status().isNotFound());
     }
 
+    // ---------- EXPORT-03 ----------
+
+    @Test
+    void ical_returnsOneEventPerLesson() throws Exception {
+        lesson(periods.get(0), roomId);
+        lesson(periods.get(1), null);
+
+        MvcResult result = mockMvc.perform(get(exportUrl("ical"))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("userId", String.valueOf(teacherUserId)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String ics = result.getResponse().getContentAsString();
+        assertThat(ics).startsWith("BEGIN:VCALENDAR");
+        assertThat(ics).contains("VERSION:2.0").contains("PRODID:-//SchediFlow");
+        assertThat(ics.split("BEGIN:VEVENT", -1)).hasSize(3); // 2 events => 3 fragments
+        assertThat(ics).contains("SUMMARY:Maths").contains("8A");
+        assertThat(ics).contains("LOCATION:Lab 1");
+        assertThat(ics).endsWith("END:VCALENDAR\r\n");
+    }
+
+    @Test
+    void ical_excludesLessonsFallingOnHolidays() throws Exception {
+        lesson(periods.get(0), null);
+        markHoliday(MONDAY);
+
+        MvcResult result = mockMvc.perform(get(exportUrl("ical"))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("userId", String.valueOf(teacherUserId)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        assertThat(result.getResponse().getContentAsString()).doesNotContain("BEGIN:VEVENT");
+    }
+
+    @Test
+    void ical_onlyIncludesTheRequestedUsersLessons() throws Exception {
+        lesson(periods.get(0), null);
+        long otherUserId = inviteAndGetUserId(adminToken, "o+" + UUID.randomUUID() + "@export-test.edu");
+        insertLesson(tenantId, timetableId, subjectId, classId, otherUserId, periods.get(2), MONDAY);
+
+        MvcResult result = mockMvc.perform(get(exportUrl("ical"))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("userId", String.valueOf(teacherUserId)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        assertThat(result.getResponse().getContentAsString().split("BEGIN:VEVENT", -1)).hasSize(2);
+    }
+
+    @Test
+    void ical_teacherMayExportTheirOwnSchedule() throws Exception {
+        lesson(periods.get(0), null);
+
+        mockMvc.perform(get(exportUrl("ical"))
+                        .header("Authorization", "Bearer " + teacherToken)
+                        .param("userId", String.valueOf(teacherUserId)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void ical_teacherMayNotExportSomeoneElses() throws Exception {
+        long otherUserId = inviteAndGetUserId(adminToken, "o+" + UUID.randomUUID() + "@export-test.edu");
+
+        mockMvc.perform(get(exportUrl("ical"))
+                        .header("Authorization", "Bearer " + teacherToken)
+                        .param("userId", String.valueOf(otherUserId)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void ical_unknownUser_returns404() throws Exception {
+        mockMvc.perform(get(exportUrl("ical"))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("userId", "999999999"))
+                .andExpect(status().isNotFound());
+    }
+
     // ---------- EXPORT-05 ----------
 
     @Test
@@ -284,6 +363,17 @@ class TimetableExportAndReportEndpointTest extends AbstractEndpointTest {
             jdbcTemplate.update("UPDATE lessons SET room_id = ? WHERE id = ?", room, id);
         }
         return id;
+    }
+
+    /** Marks a date as a holiday via the calendar API so the iCal filter has something to exclude. */
+    private void markHoliday(LocalDate date) throws Exception {
+        long yearId = activeAcademicYearId(adminToken);
+        long calendarId = createdId(postCreated("/api/v1/holiday-calendars", adminToken, Map.of(
+                "academicYearId", yearId, "name", "Cal " + UUID.randomUUID(), "country", "GB")));
+        jdbcTemplate.update(
+                "INSERT INTO holiday_dates (holiday_calendar_id, tenant_id, name, date, type, source)"
+                        + " VALUES (?, ?, ?, ?, ?, ?)",
+                calendarId, tenantId, "Break", date, "PUBLIC_HOLIDAY", "MANUAL");
     }
 
     private void requireHours(int periodsPerCycle) throws Exception {

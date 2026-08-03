@@ -2,7 +2,9 @@ package com.schediflow.api.v1;
 
 import com.schediflow.dto.response.TimetableExportRow;
 import com.schediflow.service.TimetableExportService;
+import com.schediflow.security.JwtPrincipal;
 import com.schediflow.service.export.TimetableCsvExporter;
+import com.schediflow.service.export.TimetableIcalExporter;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +12,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.ByteArrayOutputStream;
@@ -51,5 +55,29 @@ public class TimetableExportController {
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"timetable-" + timetableId + ".csv\"")
                 .body(buffer.toByteArray());
+    }
+
+    /**
+     * One person's lessons as an .ics feed (EXPORT-03). Teachers may export their own schedule;
+     * ADMIN and MOD may export anyone's.
+     *
+     * @return 200 with the calendar; 403 if a teacher asks for someone else;
+     *         404 if the timetable or user is not in the tenant
+     */
+    @GetMapping("/ical")
+    public ResponseEntity<byte[]> ical(
+            @AuthenticationPrincipal JwtPrincipal principal,
+            @PathVariable Long timetableId,
+            @RequestParam Long userId) {
+
+        List<TimetableExportRow> rows = exportService.loadRowsForUser(principal, timetableId, userId);
+        String ics = TimetableIcalExporter.render(
+                "SchediFlow", rows, exportService.holidaysCovering(rows));
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/calendar;charset=UTF-8"))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"schedule-" + timetableId + "-" + userId + ".ics\"")
+                .body(ics.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 }

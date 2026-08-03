@@ -23,6 +23,7 @@
         <springdoc.version>2.6.0</springdoc.version>
         <jjwt.version>0.12.6</jjwt.version>
         <commons-csv.version>1.11.0</commons-csv.version>
+        <ical4j.version>3.2.19</ical4j.version>
     </properties>
 
     <dependencies>
@@ -123,6 +124,13 @@
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
+        </dependency>
+
+        <!-- ical4j — personal .ics schedule export (EXPORT-03) -->
+        <dependency>
+            <groupId>org.mnode.ical4j</groupId>
+            <artifactId>ical4j</artifactId>
+            <version>${ical4j.version}</version>
         </dependency>
 
         <!-- Mail + Thymeleaf — transactional email (NOTIF-03) -->
