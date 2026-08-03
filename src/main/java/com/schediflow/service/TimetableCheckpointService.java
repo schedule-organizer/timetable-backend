@@ -1,5 +1,6 @@
 package com.schediflow.service;
 
+import com.schediflow.audit.Audited;
 import com.schediflow.domain.Lesson;
 import com.schediflow.domain.Timetable;
 import com.schediflow.domain.TimetableCheckpoint;
@@ -111,6 +112,7 @@ public class TimetableCheckpointService {
      * already working to. Idempotent — restoring the same checkpoint twice leaves the same state.</p>
      */
     @Transactional
+    @Audited(action = "RESTORE_CHECKPOINT", entityType = "Timetable")
     public CheckpointResponse restore(Long timetableId, Long checkpointId) {
         Long tenantId = TenantContext.getTenantId();
         Timetable timetable = findTimetableOrThrow(tenantId, timetableId);
