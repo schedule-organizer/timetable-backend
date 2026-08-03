@@ -9,7 +9,10 @@ import com.schediflow.repository.HolidayDateRepository;
 import com.schediflow.repository.LessonRepository;
 import com.schediflow.repository.TeacherRepository;
 import com.schediflow.repository.TimetableRepository;
+import com.schediflow.repository.TenantRepository;
+import com.schediflow.repository.TermRepository;
 import com.schediflow.repository.UserRepository;
+import com.schediflow.service.export.TimetablePdfView;
 import com.schediflow.security.JwtPrincipal;
 import org.springframework.security.access.AccessDeniedException;
 import com.schediflow.security.TenantContext;
@@ -35,18 +38,61 @@ public class TimetableExportService {
     private final HolidayDateRepository holidayDateRepository;
     private final UserRepository userRepository;
     private final TeacherRepository teacherRepository;
+    private final TermRepository termRepository;
+    private final TenantRepository tenantRepository;
 
     public TimetableExportService(
             TimetableRepository timetableRepository,
             LessonRepository lessonRepository,
             HolidayDateRepository holidayDateRepository,
             UserRepository userRepository,
-            TeacherRepository teacherRepository) {
+            TeacherRepository teacherRepository,
+            TermRepository termRepository,
+            TenantRepository tenantRepository) {
         this.timetableRepository = timetableRepository;
         this.lessonRepository = lessonRepository;
         this.holidayDateRepository = holidayDateRepository;
         this.userRepository = userRepository;
         this.teacherRepository = teacherRepository;
+        this.termRepository = termRepository;
+        this.tenantRepository = tenantRepository;
+    }
+
+    /** Everything the printed header needs, alongside the lessons themselves (EXPORT-01). */
+    public record PdfContext(
+            String schoolName, String timetableName, String termRange,
+            List<TimetableExportRow> rows) {}
+
+    @Transactional(readOnly = true)
+    public PdfContext pdfContext(Long timetableId) {
+        Long tenantId = TenantContext.getTenantId();
+        var timetable = timetableRepository
+                .findByIdAndTenantId(timetableId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Timetable not found: " + timetableId));
+
+        String schoolName = tenantRepository.findById(tenantId)
+                .map(com.schediflow.domain.Tenant::getName)
+                .orElse("");
+        String termRange = termRepository.findByIdAndTenantId(timetable.getTermId(), tenantId)
+                .map(term -> term.getName() + " (" + term.getStartDate() + " – " + term.getEndDate() + ")")
+                .orElse(null);
+
+        return new PdfContext(
+                schoolName,
+                timetable.getName(),
+                termRange,
+                lessonRepository.findExportRows(tenantId, timetableId));
+    }
+
+    public TimetablePdfView parseView(String raw) {
+        String normalized = raw == null ? "CLASS" : raw.trim().toUpperCase();
+        for (TimetablePdfView candidate : TimetablePdfView.values()) {
+            if (candidate.name().equals(normalized)) {
+                return candidate;
+            }
+        }
+        throw new BadRequestException(
+                "Invalid view: " + raw + ". Must be one of: CLASS, TEACHER, ROOM");
     }
 
     /**

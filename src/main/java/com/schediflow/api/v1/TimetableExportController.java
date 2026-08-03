@@ -5,6 +5,8 @@ import com.schediflow.service.TimetableExportService;
 import com.schediflow.security.JwtPrincipal;
 import com.schediflow.service.export.TimetableCsvExporter;
 import com.schediflow.service.export.TimetableIcalExporter;
+import com.schediflow.service.export.TimetablePdfRenderer;
+import com.schediflow.service.export.TimetablePdfView;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,9 +28,44 @@ import java.util.List;
 public class TimetableExportController {
 
     private final TimetableExportService exportService;
+    private final org.thymeleaf.TemplateEngine templateEngine;
 
-    public TimetableExportController(TimetableExportService exportService) {
+    public TimetableExportController(
+            TimetableExportService exportService, org.thymeleaf.TemplateEngine templateEngine) {
         this.exportService = exportService;
+        this.templateEngine = templateEngine;
+    }
+
+    /**
+     * A printable timetable grid as PDF (EXPORT-01).
+     *
+     * @param view CLASS, TEACHER or ROOM; defaults to CLASS
+     * @return 200 with the PDF; 400 for an unknown view; 403 without ADMIN/MOD;
+     *         404 if the timetable is not in the tenant
+     */
+    @GetMapping("/pdf")
+    @PreAuthorize("hasAnyRole(\'ADMIN\', \'MOD\')")
+    public ResponseEntity<byte[]> pdf(
+            @PathVariable Long timetableId,
+            @RequestParam(required = false, defaultValue = "CLASS") String view) {
+
+        TimetablePdfView pdfView = exportService.parseView(view);
+        TimetableExportService.PdfContext context = exportService.pdfContext(timetableId);
+
+        byte[] pdf = TimetablePdfRenderer.render(
+                templateEngine,
+                context.schoolName(),
+                context.timetableName(),
+                context.termRange(),
+                pdfView,
+                context.rows());
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"timetable-" + timetableId + "-"
+                                + pdfView.name().toLowerCase() + ".pdf\"")
+                .body(pdf);
     }
 
     /**

@@ -123,6 +123,70 @@ class TimetableExportAndReportEndpointTest extends AbstractEndpointTest {
                 .andExpect(status().isNotFound());
     }
 
+    // ---------- EXPORT-01 ----------
+
+    @Test
+    void pdf_returnsAPdfAttachmentForTheDefaultClassView() throws Exception {
+        lesson(periods.get(0), roomId);
+
+        MvcResult result = mockMvc.perform(get(exportUrl("pdf"))
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "application/pdf"))
+                .andExpect(header().string("Content-Disposition",
+                        "attachment; filename=\"timetable-" + timetableId + "-class.pdf\""))
+                .andReturn();
+
+        byte[] pdf = result.getResponse().getContentAsByteArray();
+        assertThat(new String(pdf, 0, 5)).isEqualTo("%PDF-");
+        assertThat(pdf.length).isGreaterThan(500);
+    }
+
+    @Test
+    void pdf_supportsTeacherAndRoomViews() throws Exception {
+        lesson(periods.get(0), roomId);
+
+        for (String view : List.of("TEACHER", "ROOM", "teacher")) {
+            MvcResult result = mockMvc.perform(get(exportUrl("pdf"))
+                            .header("Authorization", "Bearer " + adminToken)
+                            .param("view", view))
+                    .andExpect(status().isOk())
+                    .andReturn();
+            assertThat(new String(result.getResponse().getContentAsByteArray(), 0, 5)).isEqualTo("%PDF-");
+        }
+    }
+
+    @Test
+    void pdf_emptyTimetable_stillProducesADocument() throws Exception {
+        MvcResult result = mockMvc.perform(get(exportUrl("pdf"))
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        assertThat(new String(result.getResponse().getContentAsByteArray(), 0, 5)).isEqualTo("%PDF-");
+    }
+
+    @Test
+    void pdf_unknownView_returns400() throws Exception {
+        mockMvc.perform(get(exportUrl("pdf"))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("view", "SIDEWAYS"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void pdf_asTeacher_returns403() throws Exception {
+        mockMvc.perform(get(exportUrl("pdf")).header("Authorization", "Bearer " + teacherToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void pdf_crossTenant_returns404() throws Exception {
+        mockMvc.perform(get(exportUrl("pdf"))
+                        .header("Authorization", "Bearer " + otherTenantAdminToken))
+                .andExpect(status().isNotFound());
+    }
+
     // ---------- EXPORT-03 ----------
 
     @Test
