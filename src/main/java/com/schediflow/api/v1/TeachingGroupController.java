@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * CRUD endpoints for teaching groups — a teacher delivering a subject to one or more school classes.
- * Write operations (POST, PUT, DELETE) are restricted to ADMIN and MOD roles.
+ * Write operations (POST, PUT, DELETE) are restricted to ADMIN and MODERATOR roles.
  * Read operations (GET) are available to all authenticated users.
  */
 @RestController
@@ -54,7 +54,7 @@ public class TeachingGroupController {
      *         409 if the teacher already teaches that subject to one of the classes
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<TeachingGroupResponse> create(@Valid @RequestBody TeachingGroupRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(teachingGroupService.create(request));
     }
@@ -66,7 +66,7 @@ public class TeachingGroupController {
      *         409 on a duplicate teacher/subject/class combination
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<TeachingGroupResponse> update(
             @PathVariable Long id, @Valid @RequestBody TeachingGroupRequest request) {
         return ResponseEntity.ok(teachingGroupService.update(id, request));
@@ -78,7 +78,7 @@ public class TeachingGroupController {
      * @return 204 on success; 404 if not found
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         teachingGroupService.delete(id);
         return ResponseEntity.noContent().build();

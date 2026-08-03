@@ -15,7 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * The scheduling engine: start a solve, watch it, stop it. ADMIN and MOD only — generating a
+ * The scheduling engine: start a solve, watch it, stop it. ADMIN and MODERATOR only — generating a
  * timetable rewrites everyone's schedule.
  */
 @RestController
@@ -36,7 +36,7 @@ public class EngineController {
      *         409 if a job is already running for that timetable
      */
     @PostMapping("/run")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<SolverJobResponse> run(
             @AuthenticationPrincipal JwtPrincipal principal,
             @Valid @RequestBody SolverRunRequest request) {
@@ -45,14 +45,14 @@ public class EngineController {
 
     /** @return 200 with the job; 404 if not in the tenant */
     @GetMapping("/jobs/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<SolverJobResponse> getJob(@PathVariable Long id) {
         return ResponseEntity.ok(solverService.getJob(id));
     }
 
     /** @return 200 with a page of jobs, newest first, optionally filtered by timetable */
     @GetMapping("/jobs")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<PagedResponse<SolverJobResponse>> listJobs(
             @RequestParam(required = false) Long timetableId,
             @RequestParam(defaultValue = "0") int page,
@@ -68,7 +68,7 @@ public class EngineController {
      * @return 200 with the cancelled job; 400 if already terminal; 404 if not in the tenant
      */
     @PostMapping("/jobs/{id}/cancel")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<SolverJobResponse> cancel(@PathVariable Long id) {
         return ResponseEntity.ok(solverService.cancel(id));
     }

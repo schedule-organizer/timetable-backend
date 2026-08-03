@@ -63,7 +63,7 @@ class SockJsFallbackIntegrationTest {
     void aSockJsClientCanConnectAndSubscribe() throws Exception {
         StompHeaders connectHeaders = new StompHeaders();
         connectHeaders.add("Authorization",
-                "Bearer " + jwtTokenProvider.generateToken(7L, 3L, "MOD", "mod@sockjs-test.edu"));
+                "Bearer " + jwtTokenProvider.generateToken(7L, 3L, "MODERATOR", "mod@sockjs-test.edu"));
 
         session = sockJsStompClient
                 .connectAsync(

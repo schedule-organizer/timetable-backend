@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * Direct edits to a placed lesson. ADMIN and MOD may edit any lesson; other roles only their own,
+ * Direct edits to a placed lesson. ADMIN and MODERATOR may edit any lesson; other roles only their own,
  * so a teacher can rearrange their own cards without touching anyone else's.
  */
 @RestController

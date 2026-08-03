@@ -50,7 +50,7 @@ public class HolidayCalendarController {
      *         409 if a calendar already exists for the given academic year
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<HolidayCalendarResponse> create(
             @AuthenticationPrincipal JwtPrincipal principal,
             @Valid @RequestBody HolidayCalendarRequest request) {
@@ -65,7 +65,7 @@ public class HolidayCalendarController {
      *         409 if the updated academicYearId is already used by another calendar
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<HolidayCalendarResponse> update(
             @AuthenticationPrincipal JwtPrincipal principal,
             @PathVariable Long id,
@@ -79,7 +79,7 @@ public class HolidayCalendarController {
      * @return 204 on success; 404 if not found or belongs to a different tenant
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         holidayCalendarService.delete(id);
         return ResponseEntity.noContent().build();

@@ -22,7 +22,7 @@ import java.util.List;
 
 /**
  * Cover assignments — standing a different teacher in front of an existing lesson.
- * Restricted to ADMIN and MOD, as arranging cover is a timetable-management action.
+ * Restricted to ADMIN and MODERATOR, as arranging cover is a timetable-management action.
  */
 @RestController
 @RequestMapping("/api/v1/cover")
@@ -44,7 +44,7 @@ public class CoverController {
      *         404 if the lesson is not in the tenant
      */
     @GetMapping("/candidates")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<List<CoverCandidateResponse>> candidates(@RequestParam Long lessonId) {
         return ResponseEntity.ok(coverCandidateService.findCandidates(lessonId));
     }
@@ -57,7 +57,7 @@ public class CoverController {
      *         409 if the lesson already has cover, or the teacher is busy or forbidden in that period
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<CoverAssignmentResponse> assign(
             @AuthenticationPrincipal JwtPrincipal principal,
             @Valid @RequestBody CoverAssignmentRequest request) {

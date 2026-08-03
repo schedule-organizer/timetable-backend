@@ -54,7 +54,7 @@ class TeacherAvailabilityServiceTest {
     private static final Long PERIOD_2 = 102L;
 
     private static final JwtPrincipal ADMIN = new JwtPrincipal(1L, TENANT_ID, "ADMIN", "admin@x.edu");
-    private static final JwtPrincipal MOD = new JwtPrincipal(2L, TENANT_ID, "MOD", "mod@x.edu");
+    private static final JwtPrincipal MOD = new JwtPrincipal(2L, TENANT_ID, "MODERATOR", "mod@x.edu");
     private static final JwtPrincipal TEACHER =
             new JwtPrincipal(TEACHER_USER_ID, TENANT_ID, "TEACHER", "teacher@x.edu");
     private static final JwtPrincipal OTHER_TEACHER =

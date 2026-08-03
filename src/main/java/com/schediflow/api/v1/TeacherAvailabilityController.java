@@ -27,11 +27,11 @@ public class TeacherAvailabilityController {
     /**
      * Returns the teacher's weekly availability grid.
      *
-     * <p>ADMIN and MOD may read any teacher; other roles may only read the profile mapped to their
+     * <p>ADMIN and MODERATOR may read any teacher; other roles may only read the profile mapped to their
      * own user.</p>
      *
      * @return 200 with the grid; 400 if the tenant has no default bell schedule;
-     *         403 if the caller is neither ADMIN/MOD nor the teacher themselves;
+     *         403 if the caller is neither ADMIN/MODERATOR nor the teacher themselves;
      *         404 if the teacher is not in the tenant
      */
     @GetMapping

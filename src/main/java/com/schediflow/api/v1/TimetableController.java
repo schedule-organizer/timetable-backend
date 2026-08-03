@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * Timetables and their lifecycle. Writes require ADMIN or MOD; reads are open to all authenticated
+ * Timetables and their lifecycle. Writes require ADMIN or MODERATOR; reads are open to all authenticated
  * users, since every role needs to see the schedule.
  */
 @RestController
@@ -44,7 +44,7 @@ public class TimetableController {
      *         404 if not in the tenant
      */
     @PostMapping("/{id}/publish")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<TimetableResponse> publish(
             @PathVariable Long id, @RequestBody(required = false) TimetablePublishRequest request) {
         return ResponseEntity.ok(timetablePublishService.publish(id, request));
@@ -92,7 +92,7 @@ public class TimetableController {
      *         404 if the term or an explicit bellScheduleId is not in the tenant
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<TimetableResponse> create(@Valid @RequestBody TimetableRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(timetableService.create(request));
     }
@@ -103,7 +103,7 @@ public class TimetableController {
      * @return 200 on success; 404 if not found; 409 if the timetable is ARCHIVED
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<TimetableResponse> update(
             @PathVariable Long id, @Valid @RequestBody TimetableRequest request) {
         return ResponseEntity.ok(timetableService.update(id, request));
@@ -117,7 +117,7 @@ public class TimetableController {
      *         backwards transition; 404 if not found
      */
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<TimetableResponse> changeStatus(
             @PathVariable Long id, @Valid @RequestBody TimetableStatusRequest request) {
         return ResponseEntity.ok(timetableService.changeStatus(id, request.status()));
@@ -129,7 +129,7 @@ public class TimetableController {
      * @return 204 on success; 404 if not found; 409 if the timetable is PUBLISHED or ARCHIVED
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         timetableService.delete(id);
         return ResponseEntity.noContent().build();

@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * CRUD endpoints for subjects within a tenant.
- * Write operations (POST, PUT, DELETE) are restricted to ADMIN and MOD roles.
+ * Write operations (POST, PUT, DELETE) are restricted to ADMIN and MODERATOR roles.
  * Read operations (GET) are available to all authenticated users.
  */
 @RestController
@@ -53,7 +53,7 @@ public class SubjectController {
      *         409 if subject code already exists in tenant
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<SubjectResponse> create(@Valid @RequestBody SubjectRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(subjectService.create(request));
     }
@@ -65,7 +65,7 @@ public class SubjectController {
      *         404 if not found; 409 if updated code conflicts with another subject
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<SubjectResponse> update(
             @PathVariable Long id,
             @Valid @RequestBody SubjectRequest request) {
@@ -78,7 +78,7 @@ public class SubjectController {
      * @return 204 on success; 404 if not found; 409 if class subject hours reference this subject
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         subjectService.delete(id);
         return ResponseEntity.noContent().build();

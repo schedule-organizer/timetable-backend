@@ -108,14 +108,36 @@ class RoleChangeEndpointTest {
     // ── Happy path ────────────────────────────────────────────────────────────
 
     @Test
-    void changeRole_asAdmin_toMod_returns200WithUpdatedRole() throws Exception {
+    void changeRole_asAdmin_toModerator_returns200WithUpdatedRole() throws Exception {
+        mockMvc.perform(put("/api/v1/users/" + teacherId + "/role")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("role", "MODERATOR"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("MODERATOR"))
+                .andExpect(jsonPath("$.id").value(teacherId));
+    }
+
+    @Test
+    void changeRole_toTheOldModSpelling_isNoLongerAccepted() throws Exception {
         mockMvc.perform(put("/api/v1/users/" + teacherId + "/role")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("role", "MOD"))))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.role").value("MOD"))
-                .andExpect(jsonPath("$.id").value(teacherId));
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void changeRole_toAReservedRole_returns400ExplainingWhy() throws Exception {
+        for (String reserved : java.util.List.of("STUDENT", "PARENT")) {
+            mockMvc.perform(put("/api/v1/users/" + teacherId + "/role")
+                            .header("Authorization", "Bearer " + adminToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(Map.of("role", reserved))))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message")
+                            .value(org.hamcrest.Matchers.containsString("reserved")));
+        }
     }
 
     // ── Self-change guard ──────────────────────────────────────────────────────
@@ -136,7 +158,7 @@ class RoleChangeEndpointTest {
         mockMvc.perform(put("/api/v1/users/999999/role")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("role", "MOD"))))
+                        .content(objectMapper.writeValueAsString(Map.of("role", "MODERATOR"))))
                 .andExpect(status().isNotFound());
     }
 
@@ -155,7 +177,7 @@ class RoleChangeEndpointTest {
     void changeRole_withoutJwt_returns401() throws Exception {
         mockMvc.perform(put("/api/v1/users/" + teacherId + "/role")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("role", "MOD"))))
+                        .content(objectMapper.writeValueAsString(Map.of("role", "MODERATOR"))))
                 .andExpect(status().isUnauthorized());
     }
 

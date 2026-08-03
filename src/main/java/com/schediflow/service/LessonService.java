@@ -33,7 +33,7 @@ import java.util.Objects;
 public class LessonService {
 
     private static final String ROLE_ADMIN = "ADMIN";
-    private static final String ROLE_MOD = "MOD";
+    private static final String ROLE_MODERATOR = "MODERATOR";
 
     private final LessonRepository lessonRepository;
     private final RoomRepository roomRepository;
@@ -178,10 +178,10 @@ public class LessonService {
                 .orElseThrow(() -> new ResourceNotFoundException("Lesson not found: " + lessonId));
     }
 
-    /** ADMIN and MOD may edit any lesson; anyone else only the lessons they teach. */
+    /** ADMIN and MODERATOR may edit any lesson; anyone else only the lessons they teach. */
     private void assertMayEdit(JwtPrincipal principal, Lesson lesson, Long tenantId) {
         String role = principal == null ? null : principal.role();
-        if (ROLE_ADMIN.equals(role) || ROLE_MOD.equals(role)) {
+        if (ROLE_ADMIN.equals(role) || ROLE_MODERATOR.equals(role)) {
             return;
         }
         if (principal == null || !Objects.equals(lesson.getTeacherUserId(), principal.userId())) {

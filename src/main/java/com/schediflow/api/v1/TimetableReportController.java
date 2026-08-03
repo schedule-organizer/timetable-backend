@@ -22,16 +22,16 @@ public class TimetableReportController {
         this.reportService = reportService;
     }
 
-    /** @return 200 with per-teacher load and a summary; 403 without ADMIN/MOD; 404 if not in tenant */
+    /** @return 200 with per-teacher load and a summary; 403 without ADMIN/MODERATOR; 404 if not in tenant */
     @GetMapping("/teacher-utilization")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<TeacherUtilizationReport> teacherUtilization(@PathVariable Long timetableId) {
         return ResponseEntity.ok(reportService.teacherUtilization(timetableId));
     }
 
-    /** @return 200 with per-room occupancy; 403 without ADMIN/MOD; 404 if not in tenant */
+    /** @return 200 with per-room occupancy; 403 without ADMIN/MODERATOR; 404 if not in tenant */
     @GetMapping("/room-utilization")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<RoomUtilizationReport> roomUtilization(@PathVariable Long timetableId) {
         return ResponseEntity.ok(reportService.roomUtilization(timetableId));
     }

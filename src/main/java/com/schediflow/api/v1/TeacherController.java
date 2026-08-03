@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * CRUD endpoints for teacher profiles within a tenant.
- * Write operations (POST, PUT, DELETE) are restricted to ADMIN and MOD roles.
+ * Write operations (POST, PUT, DELETE) are restricted to ADMIN and MODERATOR roles.
  * Read operations (GET) are available to all authenticated users.
  */
 @RestController
@@ -53,7 +53,7 @@ public class TeacherController {
      *         409 if that user already has a teacher profile
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<TeacherResponse> create(@Valid @RequestBody TeacherRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(teacherService.create(request));
     }
@@ -65,7 +65,7 @@ public class TeacherController {
      *         409 if the target user already has another teacher profile
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<TeacherResponse> update(
             @PathVariable Long id,
             @Valid @RequestBody TeacherRequest request) {
@@ -78,7 +78,7 @@ public class TeacherController {
      * @return 204 on success; 404 if not found; 409 if the teacher has persisted lesson assignments
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         teacherService.delete(id);
         return ResponseEntity.noContent().build();

@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * CRUD endpoints for rooms within a tenant.
- * Write operations (POST, PUT, DELETE) are restricted to ADMIN and MOD roles.
+ * Write operations (POST, PUT, DELETE) are restricted to ADMIN and MODERATOR roles.
  * Read operations (GET) are available to all authenticated users.
  */
 @RestController
@@ -53,7 +53,7 @@ public class RoomController {
      *         409 if room name already exists in tenant
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<RoomResponse> create(
             @Valid @RequestBody RoomRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(roomService.create(request));
@@ -66,7 +66,7 @@ public class RoomController {
      *         404 if not found; 409 if updated name conflicts with another room
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<RoomResponse> update(
             @PathVariable Long id,
             @Valid @RequestBody RoomRequest request) {
@@ -79,7 +79,7 @@ public class RoomController {
      * @return 204 on success; 404 if not found or belongs to a different tenant
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         roomService.delete(id);
         return ResponseEntity.noContent().build();

@@ -12,7 +12,7 @@ import java.util.List;
 
 /**
  * Class × subject weekly hours matrix (periods per cycle and spread pattern per subject).
- * Reads are available to all authenticated users; writes require ADMIN or MOD.
+ * Reads are available to all authenticated users; writes require ADMIN or MODERATOR.
  */
 @RestController
 @RequestMapping("/api/v1/classes/{classId}/subject-hours")
@@ -38,10 +38,10 @@ public class ClassSubjectHourController {
      * Replaces the full subject-hours matrix for the class in one transaction.
      *
      * @return 200 with the persisted allocations; 400 if validation fails (e.g. over capacity, duplicate subjects);
-     *         404 if the class or a referenced subject is missing; 403 if the caller lacks MOD/ADMIN
+     *         404 if the class or a referenced subject is missing; 403 if the caller lacks MODERATOR/ADMIN
      */
     @PutMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<List<ClassSubjectHourResponse>> replace(
             @PathVariable Long classId, @Valid @RequestBody ClassSubjectHoursReplaceRequest request) {
         return ResponseEntity.ok(classSubjectHourService.replace(classId, request));

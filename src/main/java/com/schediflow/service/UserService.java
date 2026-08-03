@@ -12,6 +12,7 @@ import com.schediflow.repository.InvitationTokenRepository;
 import com.schediflow.repository.RefreshTokenRepository;
 import com.schediflow.repository.UserRepository;
 import com.schediflow.repository.UserSpecification;
+import com.schediflow.security.Role;
 import com.schediflow.security.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
@@ -250,7 +251,8 @@ public class UserService {
         refreshTokenRepository.deleteByUserId(targetId);
     }
 
-    private static final Set<String> VALID_ROLES = Set.of("ADMIN", "MOD", "TEACHER");
+    /** Assignable roles. STUDENT and PARENT are recognised but reserved — see {@link Role}. */
+    private static final Set<String> VALID_ROLES = Role.ASSIGNABLE;
 
     /**
      * Changes the role of the target user within the caller's tenant.
@@ -258,7 +260,9 @@ public class UserService {
      *
      * @param callerId the caller's user ID from the JWT
      * @param targetId the ID of the user to update
-     * @param role     the new role (must be ADMIN, MOD, or TEACHER)
+     * @param role     the new role: ADMIN, MODERATOR or TEACHER. The reserved STUDENT and PARENT
+     *                 values are rejected — they carry no permissions in MVP, so granting one
+     *                 would silently strip the user of access.
      * @return updated user profile
      * @throws BadRequestException       if role is invalid or caller targets themselves
      * @throws ResourceNotFoundException if target user not found in the caller's tenant
@@ -266,7 +270,11 @@ public class UserService {
     @Transactional
     public UserResponse changeRole(Long callerId, Long targetId, String role) {
         if (!VALID_ROLES.contains(role)) {
-            throw new BadRequestException("Invalid role: " + role + ". Must be one of: ADMIN, MOD, TEACHER");
+            String detail = Role.RESERVED.contains(role)
+                    ? " is reserved for future use and cannot be assigned yet"
+                    : " is not a known role";
+            throw new BadRequestException(
+                    "Invalid role: " + role + detail + ". Must be one of: ADMIN, MODERATOR, TEACHER");
         }
         if (callerId.equals(targetId)) {
             throw new BadRequestException("Cannot change own role");

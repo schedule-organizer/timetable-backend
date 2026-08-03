@@ -429,15 +429,15 @@ class UserServiceTest {
         when(userRepository.findById(20L)).thenReturn(Optional.of(target));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        var response = userService.changeRole(1L, 20L, "MOD");
+        var response = userService.changeRole(1L, 20L, "MODERATOR");
 
-        assertThat(response.role()).isEqualTo("MOD");
+        assertThat(response.role()).isEqualTo("MODERATOR");
         verify(userRepository).save(target);
     }
 
     @Test
     void changeRole_selfChange_throwsBadRequest() {
-        assertThatThrownBy(() -> userService.changeRole(5L, 5L, "MOD"))
+        assertThatThrownBy(() -> userService.changeRole(5L, 5L, "MODERATOR"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Cannot change own role");
         verify(userRepository, never()).findById(any());
@@ -447,7 +447,7 @@ class UserServiceTest {
     void changeRole_userNotFound_throwsResourceNotFound() {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> userService.changeRole(1L, 99L, "MOD"))
+        assertThatThrownBy(() -> userService.changeRole(1L, 99L, "MODERATOR"))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 

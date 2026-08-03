@@ -65,7 +65,7 @@ class CoverWebSocketIntegrationTest {
 
     @Test
     void tenantEventReachesSubscriberOnItsOwnTopic() throws Exception {
-        session = connect(token(USER_ID, TENANT_ID, "MOD"));
+        session = connect(token(USER_ID, TENANT_ID, "MODERATOR"));
         BlockingQueue<Map<String, Object>> received =
                 subscribe(session, WebSocketDestinations.tenantTopic(TENANT_ID));
 
@@ -97,7 +97,7 @@ class CoverWebSocketIntegrationTest {
 
     @Test
     void eventForAnotherTenantIsNotDelivered() throws Exception {
-        session = connect(token(USER_ID, TENANT_ID, "MOD"));
+        session = connect(token(USER_ID, TENANT_ID, "MODERATOR"));
         BlockingQueue<Map<String, Object>> received =
                 subscribe(session, WebSocketDestinations.tenantTopic(TENANT_ID));
 
@@ -132,7 +132,7 @@ class CoverWebSocketIntegrationTest {
         JwtTokenProvider expired = new JwtTokenProvider(
                 "Y2hhbmdlLXRoaXMtaW4tcHJvZHVjdGlvbi1hdC1sZWFzdC0zMi1ieXRlcw==", -1_000L);
 
-        assertThatThrownBy(() -> connect(expired.generateToken(USER_ID, TENANT_ID, "MOD", "x@y.edu")))
+        assertThatThrownBy(() -> connect(expired.generateToken(USER_ID, TENANT_ID, "MODERATOR", "x@y.edu")))
                 .isInstanceOf(ExecutionException.class)
                 .cause()
                 .isInstanceOf(ConnectionLostException.class);
@@ -140,7 +140,7 @@ class CoverWebSocketIntegrationTest {
 
     @Test
     void subscribingToAnotherTenantsTopicClosesTheSession() throws Exception {
-        session = connect(token(USER_ID, TENANT_ID, "MOD"));
+        session = connect(token(USER_ID, TENANT_ID, "MODERATOR"));
 
         session.subscribe(WebSocketDestinations.tenantTopic(TENANT_ID + 1), new CapturingHandler(
                 new LinkedBlockingQueue<>()));
