@@ -9,30 +9,23 @@ This repo pins Java 21 via `.java-version` and `.sdkmanrc`, so running `sdk env 
 
 ## Running locally
 
-```bash
-./mvnw spring-boot:run          # H2 in-memory, no services needed
-```
-
-Good enough to browse Swagger at http://localhost:8080/swagger-ui.html, and what the test suite
-uses. H2 runs in PostgreSQL *compatibility mode*, which is an approximation — anything you intend to
-ship should also be run against the real database.
-
-### Against PostgreSQL
-
-Run the external services in Docker and the application itself from your IDE, where you get a
-debugger and hot restart. [`docker-compose.services.yml`](docker-compose.services.yml) contains the
-dependencies and nothing else — PostgreSQL, MailHog, and Adminer behind a `tools` profile:
+PostgreSQL 16 is the only supported database — there is no embedded fallback. Run the services in
+Docker and the application from your IDE, where you get a debugger and hot restart.
+[`docker-compose.services.yml`](docker-compose.services.yml) contains the dependencies and nothing
+else — PostgreSQL, MailHog, and Adminer behind a `tools` profile:
 
 ```bash
 docker compose -f docker-compose.services.yml up -d
-SPRING_PROFILES_ACTIVE=postgres ./mvnw spring-boot:run
+./mvnw spring-boot:run
 ```
 
-Add `demo` to seed a full 21-class school — 30 teachers, 231 teaching groups, a curriculum that fills
-every slot — so there is something real to look at:
+Swagger is at http://localhost:8080/swagger-ui.html.
+
+Add the `demo` profile to seed a full 21-class school — 30 teachers, 231 teaching groups, a
+curriculum that fills every slot — so there is something real to look at:
 
 ```bash
-SPRING_PROFILES_ACTIVE=postgres,demo ./mvnw spring-boot:run
+SPRING_PROFILES_ACTIVE=demo ./mvnw spring-boot:run
 # sign in as admin@demo-school.demo / DemoPassw0rd!
 ```
 
@@ -70,13 +63,16 @@ to change secrets before this is reachable by anyone else.
 ### Tests
 
 ```bash
-./mvnw test                                 # ~970 tests on H2
-docker compose -f docker-compose.services.yml up -d postgres
-./mvnw test -Dtest='Postgres*Test'          # migrations + seeding on real PostgreSQL 16
+./mvnw test
 ```
 
-The PostgreSQL tests skip themselves when the database is unreachable, so the default run needs no
-Docker.
+The suite runs against a real PostgreSQL 16 that Testcontainers starts and stops for you — Docker
+must be running, but there is nothing to set up and no compose stack to start first. Each run gets a
+clean database; within a run, one container serves every test class.
+
+Tests used to run on H2 in PostgreSQL compatibility mode. It was faster and needed no Docker, and it
+let two `jsonb` columns mapped as `varchar` reach the main branch — breaking registration and custom
+templates on the real database while the suite stayed green. The speed was not worth it.
 
 ---
 

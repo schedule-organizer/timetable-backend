@@ -1,6 +1,8 @@
 package com.schediflow.service;
 
 import com.schediflow.config.DemoDataProperties;
+import com.schediflow.domain.InstitutionTemplate;
+import com.schediflow.repository.InstitutionTemplateRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +35,7 @@ class DemoDataSeederTest {
 
     @Autowired DemoDataSeeder seeder;
     @Autowired DemoDataProperties properties;
+    @Autowired InstitutionTemplateRepository templateRepository;
     @Autowired JdbcTemplate jdbcTemplate;
 
     private DemoDataSeeder.DemoDataset dataset;
@@ -180,6 +183,41 @@ class DemoDataSeederTest {
                 dataset.tenantId());
 
         assertThat(distinct).isEqualTo(properties.classCount());
+    }
+
+    @Test
+    void tenantSettingsRoundTripAsJsonb() {
+        // The seeder writes settings as a JSON string into a jsonb column. That only works because
+        // Tenant.settings carries @JdbcTypeCode(SqlTypes.JSON); without it PostgreSQL rejects the
+        // bind outright, which is how registration came to be broken on the real database while
+        // this suite — then running on H2 — stayed green.
+        String timezone = jdbcTemplate.queryForObject(
+                "SELECT settings ->> 'timezone' FROM tenants WHERE id = ?",
+                String.class,
+                dataset.tenantId());
+
+        assertThat(timezone).isEqualTo(properties.tenant().timezone());
+    }
+
+    @Test
+    void customTemplatesPersistTheirJsonbConfiguration() {
+        // Same defect, same fix, different table: TMPL-04 writes institution_templates
+        // .configuration_json, declared jsonb in V033 and mapped as text until it was corrected.
+        InstitutionTemplate template = new InstitutionTemplate();
+        template.setTenantId(dataset.tenantId());
+        template.setName("Round-trip probe");
+        template.setInstitutionType("SECONDARY");
+        template.setConfigurationJson("{\"cycleDays\":6,\"periodsPerDay\":6}");
+        template.setBuiltIn(false);
+        Long id = templateRepository.save(template).getId();
+
+        Integer cycleDays = jdbcTemplate.queryForObject(
+                "SELECT (configuration_json ->> 'cycleDays')::int FROM institution_templates "
+                        + "WHERE id = ?",
+                Integer.class,
+                id);
+
+        assertThat(cycleDays).isEqualTo(6);
     }
 
     @Test

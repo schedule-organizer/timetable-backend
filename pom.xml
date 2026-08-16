@@ -25,6 +25,7 @@
         <commons-csv.version>1.11.0</commons-csv.version>
         <ical4j.version>3.2.19</ical4j.version>
         <flying-saucer.version>9.11.2</flying-saucer.version>
+        <testcontainers.version>1.20.4</testcontainers.version>
     </properties>
 
     <dependencies>
@@ -112,8 +113,7 @@
 
         <!--
           Flyway 10 moved per-database support out of flyway-core. Without this module Flyway fails
-          at startup with "Unsupported Database: PostgreSQL 16" — so the application could not run
-          against the database it ships on, only against H2. Verified by PostgresMigrationTest.
+          at startup with "Unsupported Database: PostgreSQL 16".
         -->
         <dependency>
             <groupId>org.flywaydb</groupId>
@@ -121,11 +121,27 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- H2 in-memory DB for local dev/test (until PostgreSQL is provisioned) -->
+        <!--
+          PostgreSQL for tests too. H2 in compatibility mode used to stand in here, and it hid two
+          jsonb mapping bugs that broke registration and custom templates on the real database — the
+          suite was green throughout. Testcontainers starts a real PostgreSQL 16 from the
+          `jdbc:tc:` URL in src/test/resources/application.yml, so tests need Docker but no manual
+          setup, and each run gets a clean database.
+
+          Version is pinned rather than inherited: Spring Boot 3.3.5 manages an older Testcontainers,
+          and the postgresql module is only resolvable here at 1.20.4.
+        -->
         <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>runtime</scope>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
         </dependency>
 
         <!-- Spring Cache + Caffeine (public settings TTL cache) -->
@@ -214,6 +230,29 @@
                             <version>${mapstruct.version}</version>
                         </path>
                     </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <!--
+                          Point the suite at a Testcontainers-managed PostgreSQL 16. The `jdbc:tc:`
+                          driver starts the container on first connection and stops it on JVM exit,
+                          so tests need Docker but no manual setup, and every run gets a clean
+                          database.
+
+                          Set here rather than in src/test/resources/application.yml: a test file of
+                          that name shadows the main one entirely rather than merging with it, which
+                          would silently drop every app.* property. System properties override the
+                          datasource and leave the rest of the configuration intact.
+                        -->
+                        <spring.datasource.url>jdbc:tc:postgresql:16-alpine:///schediflow?TC_DAEMON=true</spring.datasource.url>
+                        <spring.datasource.driver-class-name>org.testcontainers.jdbc.ContainerDatabaseDriver</spring.datasource.driver-class-name>
+                        <spring.datasource.username>test</spring.datasource.username>
+                        <spring.datasource.password>test</spring.datasource.password>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
         </plugins>

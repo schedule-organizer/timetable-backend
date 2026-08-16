@@ -20,9 +20,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Full Spring Boot integration test for POST /api/v1/auth/register.
- * Uses H2 in-memory database — no external dependencies required.
+ * Runs against a Testcontainers-managed PostgreSQL 16, like the rest of the suite.
  *
- * @DirtiesContext resets the H2 DB between tests so email uniqueness checks are independent.
+ * @DirtiesContext rebuilds the Spring context between tests; it does not reset the database, which
+ * lives for the whole run, so email uniqueness checks rely on unique addresses per test.
  */
 @SpringBootTest
 @AutoConfigureMockMvc

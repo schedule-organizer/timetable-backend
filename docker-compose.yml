@@ -38,9 +38,9 @@ services:
       context: .
       dockerfile: docker/Dockerfile
     environment:
-      # postgres profile swaps the H2 default for the real database; add demo to seed the 21-class
-      # school, or prod to turn off Swagger. e.g. SPRING_PROFILES_ACTIVE=postgres,demo
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-postgres}
+      # PostgreSQL is the default datasource, so no profile is needed for it. Set demo to seed the
+      # 21-class school, or prod to turn off Swagger. e.g. SPRING_PROFILES_ACTIVE=demo
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-}
       # Hardcoded to the service name rather than ${POSTGRES_URL}: that variable points at
       # localhost for IDE runs, which is meaningless inside the container network.
       POSTGRES_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-schediflow}

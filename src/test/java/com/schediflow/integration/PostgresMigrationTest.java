@@ -1,11 +1,9 @@
 package com.schediflow.integration;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIf;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
 import java.util.Map;
@@ -13,28 +11,18 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Runs the real migrations against real PostgreSQL.
+ * Asserts the schema the migrations actually produce.
  *
- * <p>Everything else in this suite runs on H2 in PostgreSQL <em>compatibility mode</em>, which is an
- * approximation. That approximation has already shaped the schema: partial unique indexes for active
- * room names, active subject codes, and one ACTIVE temporary schedule per timetable were all left to
- * service-layer enforcement because H2 cannot express them. Until this test existed, no migration had
- * ever been executed against the database the product actually ships on.</p>
+ * <p>The whole suite now runs on PostgreSQL via Testcontainers, so every test is implicitly a check
+ * that the migrations applied. This one checks the things that would otherwise go unnoticed: that all
+ * 35 applied rather than some silently failing, and that the column types the application relies on
+ * are the types it thinks they are.</p>
  *
- * <p>Skips itself when PostgreSQL is not reachable, so {@code ./mvnw test} on a laptop with no Docker
- * behaves as before. To run it:</p>
- *
- * <pre>
- *   docker compose up -d postgres
- *   ./mvnw test -Dtest=PostgresMigrationTest
- * </pre>
- *
- * <p>The condition is evaluated before the Spring context is built, which is why it is
- * {@code @EnabledIf} on a static probe rather than an assumption in {@code @BeforeAll}.</p>
+ * <p>That last point is not hypothetical. Two {@code jsonb} columns were mapped as {@code varchar}
+ * and nothing caught it, because the suite ran on H2 in compatibility mode where the difference does
+ * not exist — while registration and custom templates were broken on the real database.</p>
  */
 @SpringBootTest
-@ActiveProfiles("postgres")
-@EnabledIf("com.schediflow.integration.PostgresAvailability#reachable")
 class PostgresMigrationTest {
 
     private static final int EXPECTED_MIGRATIONS = 35;

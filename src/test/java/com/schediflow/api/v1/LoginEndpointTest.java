@@ -20,8 +20,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Full Spring Boot integration tests for POST /api/v1/auth/login.
- * Uses H2 in-memory DB. Each test uses a UUID-based email to avoid conflicts
- * across test runs (H2 DB persists across @DirtiesContext resets due to DB_CLOSE_DELAY=-1).
+ * Runs against a Testcontainers-managed PostgreSQL 16. One container serves the whole run and
+ * @DirtiesContext does not reset it, so each test uses a UUID-based email to avoid collisions.
  *
  * max-requests=4 so @BeforeEach register (1) + 3 ok logins + 1 rejected = 429.
  * @DirtiesContext resets the rate limiter's in-memory state between tests.
