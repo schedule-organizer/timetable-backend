@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-29
-last_updated: 2026-08-03 # AUTH-11 → done (MOD → MODERATOR)
+last_updated: 2026-08-16 # SCHED-17/18 added; epic-6 reopened (lesson generation + clash constraints)
 project: timetable-backend
 project_key: NOKEY
 tracking_system: file-system
@@ -108,7 +108,10 @@ development_status:
   epic-5-retrospective: optional
 
   # ─── Epic 6: Timetable & Scheduling Engine ──────────────────────────────────
-  epic-6: done
+  # Reopened 2026-08-16: SCHED-17/18 close the gap between "the solver rearranges a timetable" and
+  # "the product produces one". Nothing generates lessons, and the solver cannot express teacher,
+  # class or room double-booking, so FR19 is not actually met by the stories marked done below.
+  epic-6: in-progress
   6-sched-01: done
   6-sched-02: done
   6-sched-03: done
@@ -124,6 +127,10 @@ development_status:
   # Added by the 2026-03-29 readiness review to close FR24/FR26/FR27; never tracked until now.
   6-sched-13: done
   6-sched-14: done
+  # Added 2026-08-16. SCHED-17 must land before SCHED-18: there is nothing to constrain until a
+  # timetable has a lesson set.
+  6-sched-17: ready-for-dev
+  6-sched-18: ready-for-dev
   epic-6-retrospective: optional
 
   # ─── Epic 7: Cover, Delegation & Temporary Schedules ────────────────────────

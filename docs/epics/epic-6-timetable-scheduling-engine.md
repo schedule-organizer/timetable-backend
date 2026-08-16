@@ -22,6 +22,22 @@ This is SchediFlow's primary differentiator. Timetablers currently spend 2–4 w
 | SCHED-10 | `POST /api/v1/lessons/{id}/swap` — atomic swap of two lesson cards with conflict validation on both sides | 3 | Not Started |
 | SCHED-11 | `ConflictDetectionService` — real-time constraint checks: teacher double-booking, room double-booking, class double-booking, room capacity, forbidden slots | 5 | Not Started |
 | SCHED-12 | WebSocket: broadcast `LESSON_UPDATED` to `/topic/timetable/{timetableId}` on every lesson mutation (move, pin, swap, solver result) | 2 | Not Started |
+| SCHED-13 | Schedule checkpoints (save & restore) — added by the 2026-03-29 readiness review for FR26/FR27 | 5 | Done |
+| SCHED-14 | Targeted partial regeneration — added by the 2026-03-29 readiness review for FR24 | 5 | Done |
+| SCHED-17 | Lesson generation from `class_subject_hours` + `teaching_groups`; one cycle week; demo fixture | 8 | Ready for Dev |
+| SCHED-18 | Planning model + core clash constraints (teacher/class/room double-booking, forbidden slots) | 8 | Ready for Dev |
+
+## Scope correction (2026-08-16)
+SCHED-01…14 shipped, but two gaps mean the epic's goal is not yet met:
+
+1. **Nothing generates lessons.** `SolverProblemBuilder` rearranges the lessons a timetable already
+   has; an empty timetable solves instantly with nothing to place. **SCHED-17.**
+2. **The solver cannot express double-booking.** Only three constraints exist (holiday, qualification,
+   option block), and the planning `Lesson` has no `classId` or `roomId`. A solve can stack every
+   lesson into one slot and score zero hard violations, while `ConflictDetectionService` would reject
+   the same placement made by hand. **SCHED-18.**
+
+FR19 is not satisfied until both land. SCHED-17 precedes SCHED-18.
 
 ## Notes
 In-process JVM solver (no cloud dependency, TD-01). Thread pool isolated via `AsyncConfig`. Solver timeout enforced per subscription tier: Starter 30s, Professional 2 min, Enterprise 10 min. Node-local WebSocket for MVP; Redis pub/sub before scaling beyond 1 backend replica (TD-02).
