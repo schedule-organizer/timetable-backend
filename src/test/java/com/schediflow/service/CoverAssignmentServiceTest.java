@@ -60,7 +60,7 @@ class CoverAssignmentServiceTest {
     private static final Long COVER_TEACHER_USER_ID = 501L;
     private static final LocalDate LESSON_DATE = LocalDate.of(2026, 9, 7);
 
-    private static final JwtPrincipal MOD = new JwtPrincipal(9L, TENANT_ID, "MOD", "mod@x.edu");
+    private static final JwtPrincipal MOD = new JwtPrincipal(9L, TENANT_ID, "MODERATOR", "mod@x.edu");
 
     @BeforeEach
     void setUp() {

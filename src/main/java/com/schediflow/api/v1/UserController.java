@@ -47,7 +47,7 @@ public class UserController {
      * @return 200 OK with {@link PagedResponse}; 403 if caller is TEACHER
      */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<PagedResponse<UserResponse>> listUsers(
             @RequestParam(required = false) String role,
             @RequestParam(required = false) String status,
@@ -108,7 +108,7 @@ public class UserController {
      * @return 204 No Content on success; 400 if self-deactivation; 403 if TEACHER; 404 if user not found
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<Void> deactivateUser(
             @PathVariable Long id,
             @AuthenticationPrincipal JwtPrincipal principal) {
@@ -136,7 +136,7 @@ public class UserController {
     }
 
     @PostMapping("/invite")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<Void> invite(
             @Valid @RequestBody InviteRequest request,
             @AuthenticationPrincipal JwtPrincipal principal) {

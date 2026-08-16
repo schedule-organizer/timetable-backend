@@ -43,7 +43,7 @@ public class TeacherAvailabilityService {
     private static final Logger log = LoggerFactory.getLogger(TeacherAvailabilityService.class);
 
     private static final String ROLE_ADMIN = "ADMIN";
-    private static final String ROLE_MOD = "MOD";
+    private static final String ROLE_MODERATOR = "MODERATOR";
     private static final int DEFAULT_DAYS_IN_CYCLE = 5;
 
     private final TeacherRepository teacherRepository;
@@ -120,10 +120,10 @@ public class TeacherAvailabilityService {
         return new TeacherAvailabilityResponse(teacherId, periodIds, days, dateSpecific);
     }
 
-    /** ADMIN and MOD may read any teacher; anyone else only the profile mapped to their own user. */
+    /** ADMIN and MODERATOR may read any teacher; anyone else only the profile mapped to their own user. */
     private void assertMayRead(JwtPrincipal principal, Teacher teacher) {
         String role = principal == null ? null : principal.role();
-        if (ROLE_ADMIN.equals(role) || ROLE_MOD.equals(role)) {
+        if (ROLE_ADMIN.equals(role) || ROLE_MODERATOR.equals(role)) {
             return;
         }
         if (principal == null || !Objects.equals(teacher.getUserId(), principal.userId())) {

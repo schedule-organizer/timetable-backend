@@ -373,7 +373,7 @@ class BellScheduleEndpointTest {
         mockMvc.perform(put("/api/v1/users/" + userId + "/role")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("role", "MOD"))))
+                        .content(objectMapper.writeValueAsString(Map.of("role", "MODERATOR"))))
                 .andExpect(status().isOk());
 
         return loginAndGetToken(email, PASSWORD);

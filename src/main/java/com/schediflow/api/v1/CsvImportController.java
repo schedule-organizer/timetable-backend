@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * Bulk CSV import for rooms, classes and teachers. ADMIN and MOD only.
+ * Bulk CSV import for rooms, classes and teachers. ADMIN and MODERATOR only.
  *
  * <p>Expected columns (case-insensitive; only the first ones are required):</p>
  * <ul>
@@ -37,10 +37,10 @@ public class CsvImportController {
      * Uploads a CSV file and upserts its rows. Valid rows are applied even when others fail.
      *
      * @return 200 with a summary and per-row errors; 400 for an unknown entityType, a file over 5MB,
-     *         more than 1000 rows, unparseable CSV, or a missing required column; 403 without ADMIN/MOD
+     *         more than 1000 rows, unparseable CSV, or a missing required column; 403 without ADMIN/MODERATOR
      */
     @PostMapping(path = "/{entityType}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<CsvImportResponse> importCsv(
             @PathVariable String entityType, @RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(csvImportService.importCsv(entityType, file));

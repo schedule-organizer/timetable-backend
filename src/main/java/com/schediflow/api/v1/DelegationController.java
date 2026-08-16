@@ -50,12 +50,12 @@ public class DelegationController {
      * Approves or rejects a pending request. An approval reassigns every affected lesson atomically.
      *
      * @return 200 with the decided request; 400 for an unknown decision, a missing rejection reason,
-     *         or a request already in a terminal state; 403 without ADMIN/MOD;
+     *         or a request already in a terminal state; 403 without ADMIN/MODERATOR;
      *         404 if the request is not in the tenant;
      *         409 if approving would double-book a teacher
      */
     @PatchMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<DelegationRequestResponse> decide(
             @AuthenticationPrincipal JwtPrincipal principal,
             @PathVariable Long id,

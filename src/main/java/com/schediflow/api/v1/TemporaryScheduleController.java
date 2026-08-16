@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * Temporary schedules — date-bounded overlays on a base timetable.
- * Writes require ADMIN or MOD; reads are open to all authenticated users.
+ * Writes require ADMIN or MODERATOR; reads are open to all authenticated users.
  */
 @RestController
 @RequestMapping("/api/v1/temporary-schedules")
@@ -45,7 +45,7 @@ public class TemporaryScheduleController {
      *         409 if that timetable already has an active overlay
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<TemporaryScheduleResponse> create(
             @Valid @RequestBody TemporaryScheduleRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(temporaryScheduleService.create(request));
@@ -58,7 +58,7 @@ public class TemporaryScheduleController {
      *         409 if another active overlay already covers the timetable
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<TemporaryScheduleResponse> update(
             @PathVariable Long id, @Valid @RequestBody TemporaryScheduleRequest request) {
         return ResponseEntity.ok(temporaryScheduleService.update(id, request));
@@ -70,7 +70,7 @@ public class TemporaryScheduleController {
      * @return 204 on success; 404 if not found
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         temporaryScheduleService.delete(id);
         return ResponseEntity.noContent().build();

@@ -22,7 +22,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 
-/** Timetable exports. ADMIN and MOD only — an export is a full copy of the schedule. */
+/** Timetable exports. ADMIN and MODERATOR only — an export is a full copy of the schedule. */
 @RestController
 @RequestMapping("/api/v1/timetables/{timetableId}/export")
 public class TimetableExportController {
@@ -40,11 +40,11 @@ public class TimetableExportController {
      * A printable timetable grid as PDF (EXPORT-01).
      *
      * @param view CLASS, TEACHER or ROOM; defaults to CLASS
-     * @return 200 with the PDF; 400 for an unknown view; 403 without ADMIN/MOD;
+     * @return 200 with the PDF; 400 for an unknown view; 403 without ADMIN/MODERATOR;
      *         404 if the timetable is not in the tenant
      */
     @GetMapping("/pdf")
-    @PreAuthorize("hasAnyRole(\'ADMIN\', \'MOD\')")
+    @PreAuthorize("hasAnyRole(\'ADMIN\', \'MODERATOR\')")
     public ResponseEntity<byte[]> pdf(
             @PathVariable Long timetableId,
             @RequestParam(required = false, defaultValue = "CLASS") String view) {
@@ -77,10 +77,10 @@ public class TimetableExportController {
      * buffering the rendered text, at the cost of an async response that fights the security filter
      * chain. True end-to-end streaming needs a cursor-based read; recorded as deferred work.</p>
      *
-     * @return 200 with the file; 403 without ADMIN/MOD; 404 if the timetable is not in the tenant
+     * @return 200 with the file; 403 without ADMIN/MODERATOR; 404 if the timetable is not in the tenant
      */
     @GetMapping("/csv")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<byte[]> csv(@PathVariable Long timetableId) throws IOException {
         List<TimetableExportRow> rows = exportService.loadRows(timetableId);
 
@@ -96,7 +96,7 @@ public class TimetableExportController {
 
     /**
      * One person's lessons as an .ics feed (EXPORT-03). Teachers may export their own schedule;
-     * ADMIN and MOD may export anyone's.
+     * ADMIN and MODERATOR may export anyone's.
      *
      * @return 200 with the calendar; 403 if a teacher asks for someone else;
      *         404 if the timetable or user is not in the tenant

@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/holidays/{calendarId}/dates")
-@PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+@PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
 public class HolidayDateController {
 
     private final HolidayDateService holidayDateService;

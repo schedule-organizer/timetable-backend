@@ -18,7 +18,7 @@ import java.util.function.Function;
 
 /**
  * Timetable checkpoints — save a named snapshot, list them, roll back to one (SCHED-13).
- * ADMIN and MOD only: restoring rewrites everyone's schedule.
+ * ADMIN and MODERATOR only: restoring rewrites everyone's schedule.
  */
 @RestController
 @RequestMapping("/api/v1/timetables/{timetableId}/checkpoints")
@@ -32,7 +32,7 @@ public class TimetableCheckpointController {
 
     /** @return 201 with the checkpoint; 404 if the timetable is not in the tenant */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<CheckpointResponse> create(
             @AuthenticationPrincipal JwtPrincipal principal,
             @PathVariable Long timetableId,
@@ -43,7 +43,7 @@ public class TimetableCheckpointController {
 
     /** @return 200 with a page of checkpoints, newest first */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<PagedResponse<CheckpointResponse>> list(
             @PathVariable Long timetableId,
             @RequestParam(defaultValue = "0") int page,
@@ -60,7 +60,7 @@ public class TimetableCheckpointController {
      *         409 if the timetable is not a DRAFT
      */
     @PostMapping("/{checkpointId}/restore")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<CheckpointResponse> restore(
             @PathVariable Long timetableId, @PathVariable Long checkpointId) {
         return ResponseEntity.ok(checkpointService.restore(timetableId, checkpointId));

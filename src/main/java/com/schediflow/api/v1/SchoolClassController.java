@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * CRUD endpoints for school classes within a tenant.
- * Write operations (POST, PUT, DELETE) are restricted to ADMIN and MOD roles.
+ * Write operations (POST, PUT, DELETE) are restricted to ADMIN and MODERATOR roles.
  * Read operations (GET) are available to all authenticated users.
  */
 @RestController
@@ -53,7 +53,7 @@ public class SchoolClassController {
      *         409 if class name already exists in tenant
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<SchoolClassResponse> create(@Valid @RequestBody SchoolClassRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(schoolClassService.create(request));
     }
@@ -65,7 +65,7 @@ public class SchoolClassController {
      *         404 if not found; 409 if updated name conflicts with another class
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<SchoolClassResponse> update(
             @PathVariable Long id,
             @Valid @RequestBody SchoolClassRequest request) {
@@ -78,7 +78,7 @@ public class SchoolClassController {
      * @return 204 on success; 404 if not found; 409 if class has timetable assignments
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         schoolClassService.delete(id);
         return ResponseEntity.noContent().build();

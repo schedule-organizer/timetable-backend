@@ -50,7 +50,7 @@ public class HolidayImportController {
      * @return 200 with import counts; 400 validation; 404 calendar; 502 provider unavailable
      */
     @PostMapping("/import")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<HolidayImportResponse> importHolidays(
             @AuthenticationPrincipal JwtPrincipal principal,
             @Valid @RequestBody HolidayImportRequest request) {

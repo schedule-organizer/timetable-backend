@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * CRUD endpoints for option blocks — sets of teaching groups the solver must schedule in the same period.
- * Write operations (POST, PUT, DELETE) are restricted to ADMIN and MOD roles.
+ * Write operations (POST, PUT, DELETE) are restricted to ADMIN and MODERATOR roles.
  * Read operations (GET) are available to all authenticated users.
  */
 @RestController
@@ -53,7 +53,7 @@ public class OptionBlockController {
      *         404 if a member group is not in the tenant; 409 if a member already belongs to another block
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<OptionBlockResponse> create(@Valid @RequestBody OptionBlockRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(optionBlockService.create(request));
     }
@@ -65,7 +65,7 @@ public class OptionBlockController {
      *         409 if a member already belongs to another block
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<OptionBlockResponse> update(
             @PathVariable Long id, @Valid @RequestBody OptionBlockRequest request) {
         return ResponseEntity.ok(optionBlockService.update(id, request));
@@ -77,7 +77,7 @@ public class OptionBlockController {
      * @return 204 on success; 404 if not found
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MOD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         optionBlockService.delete(id);
         return ResponseEntity.noContent().build();

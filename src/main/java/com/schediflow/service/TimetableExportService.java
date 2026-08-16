@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 public class TimetableExportService {
 
     private static final String ROLE_ADMIN = "ADMIN";
-    private static final String ROLE_MOD = "MOD";
+    private static final String ROLE_MODERATOR = "MODERATOR";
 
     private final TimetableRepository timetableRepository;
     private final LessonRepository lessonRepository;
@@ -98,13 +98,13 @@ public class TimetableExportService {
     /**
      * One person's lessons from a timetable, for the iCal feed (EXPORT-03).
      *
-     * <p>ADMIN and MOD may export for anyone; any other role only for themselves.</p>
+     * <p>ADMIN and MODERATOR may export for anyone; any other role only for themselves.</p>
      */
     @Transactional(readOnly = true)
     public List<TimetableExportRow> loadRowsForUser(JwtPrincipal principal, Long timetableId, Long userId) {
         Long tenantId = TenantContext.getTenantId();
         String role = principal == null ? null : principal.role();
-        boolean privileged = ROLE_ADMIN.equals(role) || ROLE_MOD.equals(role);
+        boolean privileged = ROLE_ADMIN.equals(role) || ROLE_MODERATOR.equals(role);
         if (!privileged && (principal == null || !Objects.equals(userId, principal.userId()))) {
             throw new AccessDeniedException("You can only export your own schedule");
         }

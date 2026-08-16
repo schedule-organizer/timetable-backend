@@ -25,14 +25,14 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * Hard unavailability for teachers, rooms and classes. ADMIN and MOD manage any entity;
+ * Hard unavailability for teachers, rooms and classes. ADMIN and MODERATOR manage any entity;
  * a TEACHER may only read and manage slots for their own teacher profile (FR35).
  */
 @Service
 public class ForbiddenSlotService {
 
     private static final String ROLE_ADMIN = "ADMIN";
-    private static final String ROLE_MOD = "MOD";
+    private static final String ROLE_MODERATOR = "MODERATOR";
 
     private final ForbiddenSlotRepository forbiddenSlotRepository;
     private final TeacherRepository teacherRepository;
@@ -156,17 +156,17 @@ public class ForbiddenSlotService {
     }
 
     /**
-     * ADMIN and MOD manage any entity. Any other role may only touch the TEACHER entity that maps to
+     * ADMIN and MODERATOR manage any entity. Any other role may only touch the TEACHER entity that maps to
      * their own user id, so a teacher can declare their own unavailability but not anyone else's.
      */
     private void assertMayManage(
             JwtPrincipal principal, ForbiddenSlotEntityType entityType, Long entityId, Long tenantId) {
         String role = principal == null ? null : principal.role();
-        if (ROLE_ADMIN.equals(role) || ROLE_MOD.equals(role)) {
+        if (ROLE_ADMIN.equals(role) || ROLE_MODERATOR.equals(role)) {
             return;
         }
         if (entityType != ForbiddenSlotEntityType.TEACHER) {
-            throw new AccessDeniedException("Only ADMIN or MOD may manage forbidden slots for " + entityType.name());
+            throw new AccessDeniedException("Only ADMIN or MODERATOR may manage forbidden slots for " + entityType.name());
         }
         Teacher teacher = teacherRepository
                 .findByIdAndTenantIdAndActive(entityId, tenantId, true)

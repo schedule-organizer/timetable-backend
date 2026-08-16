@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * Hard unavailability for teachers, rooms and classes.
  *
- * <p>ADMIN and MOD may manage slots for any entity. Other roles may only read and manage slots for
+ * <p>ADMIN and MODERATOR may manage slots for any entity. Other roles may only read and manage slots for
  * the TEACHER entity that maps to their own user, so a teacher can declare their own unavailability
  * (FR35) without seeing or editing anyone else's.</p>
  */
