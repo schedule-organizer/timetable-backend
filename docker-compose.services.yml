@@ -1,0 +1,72 @@
+# External services only — everything the backend talks to, and nothing else.
+#
+# This is the file to use while developing: run the dependencies in Docker and the application
+# itself from your IDE or the Maven wrapper, where you get a debugger and hot restart.
+#
+#   docker compose -f docker-compose.services.yml up -d
+#   SPRING_PROFILES_ACTIVE=postgres ./mvnw spring-boot:run
+#
+# Add the DB browser when you want it:
+#   docker compose -f docker-compose.services.yml --profile tools up -d
+#
+# Stop the services, keeping the data:  docker compose -f docker-compose.services.yml down
+# Stop them and wipe the database:      docker compose -f docker-compose.services.yml down -v
+#
+# Both files share one Compose project (see below), so `down` tears down the whole project — the
+# backend container too, if the full stack was up. To stop just these, name them:
+#   docker compose stop postgres mailhog
+#
+# The full stack, including the backend container, lives in docker-compose.yml — it reuses these
+# same definitions via `extends`, so ports and credentials cannot drift between the two files.
+
+# Deliberately no `name:` — both files fall back to the directory name, so they share one project.
+# Switching between this file and docker-compose.yml then reuses the same containers and the same
+# postgres_data volume, rather than quietly giving you a second, empty database.
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-schediflow}
+      POSTGRES_USER: ${POSTGRES_USER:-schediflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-schediflow}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      # -d matters: without it pg_isready reports ready before the database itself exists, and
+      # anything starting on `service_healthy` connects to a database Flyway cannot migrate.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-schediflow} -d ${POSTGRES_DB:-schediflow}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # Catches every email the app sends — teacher invites, cover assignments, delegation decisions,
+  # publication notices. Read them at http://localhost:8025; nothing leaves your machine.
+  # The app only sends when MAIL_ENABLED=true and SMTP_HOST is set; otherwise StubEmailService logs.
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "1025"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Browse the database at http://localhost:8081 — server `postgres`, credentials as above.
+  adminer:
+    image: adminer:4
+    profiles: [tools]
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

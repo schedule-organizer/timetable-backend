@@ -110,6 +110,17 @@
             <artifactId>flyway-core</artifactId>
         </dependency>
 
+        <!--
+          Flyway 10 moved per-database support out of flyway-core. Without this module Flyway fails
+          at startup with "Unsupported Database: PostgreSQL 16" — so the application could not run
+          against the database it ships on, only against H2. Verified by PostgresMigrationTest.
+        -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- H2 in-memory DB for local dev/test (until PostgreSQL is provisioned) -->
         <dependency>
             <groupId>com.h2database</groupId>

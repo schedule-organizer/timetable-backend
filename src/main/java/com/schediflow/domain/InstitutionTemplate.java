@@ -1,6 +1,8 @@
 package com.schediflow.domain;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 
@@ -33,7 +35,13 @@ public class InstitutionTemplate {
     @Column(name = "institution_type", nullable = false, length = 64)
     private String institutionType;
 
-    @Column(name = "configuration_json", nullable = false, columnDefinition = "text")
+    /**
+     * V033 declares this {@code jsonb}; the mapping previously said {@code text}, which H2's
+     * compatibility mode tolerated and PostgreSQL rejects on write. Same defect as
+     * {@link Tenant#getSettings()}, and it takes TMPL-04 (save a custom template) with it.
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "configuration_json", nullable = false, columnDefinition = "jsonb")
     private String configurationJson;
 
     @Column(name = "is_built_in", nullable = false)

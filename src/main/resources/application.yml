@@ -2,12 +2,16 @@ spring:
   application:
     name: schediflow-backend
 
-  # Default datasource — H2 in-memory for local dev without PostgreSQL.
-  # PostgreSQL compat mode enables BIGSERIAL, JSONB, and TIMESTAMP WITH TIME ZONE.
-  # Override with environment variables (SPRING_DATASOURCE_*) for staging/prod.
+  # Default datasource — H2 in-memory, so a clone runs with no external services.
+  # PostgreSQL compat mode approximates BIGSERIAL, JSONB and TIMESTAMP WITH TIME ZONE; it is an
+  # approximation, not the real thing, so anything shipping to production should be exercised
+  # against PostgreSQL 16 too: SPRING_PROFILES_ACTIVE=postgres (see application-postgres.yml).
+  #
+  # driver-class-name is deliberately NOT pinned here. Spring infers it from the URL, so overriding
+  # SPRING_DATASOURCE_URL alone is enough to point at PostgreSQL. Pinning org.h2.Driver would make
+  # every such override fail with a driver mismatch.
   datasource:
     url: jdbc:h2:mem:schediflow;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
-    driver-class-name: org.h2.Driver
     username: sa
     password:
 

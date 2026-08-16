@@ -1,5 +1,55 @@
 # Deferred work
 
+## Resolved: the application could not run on PostgreSQL at all (2026-08-16)
+
+Standing up a PostgreSQL profile and actually booting against it surfaced three defects. All three
+were invisible on H2 and fatal on the database the product ships on, and none had ever been executed
+before, because nothing in the repo had ever connected to PostgreSQL.
+
+- **Flyway could not migrate PostgreSQL.** Flyway 10 moved per-database support out of
+  `flyway-core`; without `flyway-database-postgresql` startup fails with `Unsupported Database:
+  PostgreSQL 16.14`. Added to `pom.xml`. All 35 migrations then applied cleanly.
+- **`tenants.settings` is `jsonb`, mapped as `varchar`.** PostgreSQL rejects the bind outright
+  ("column settings is of type jsonb but expression is of type character varying"), which broke
+  institution registration (AUTH-01), the seed defaults (CONFIG-09) and every settings update
+  (CONFIG-04). Fixed with `@JdbcTypeCode(SqlTypes.JSON)`; verified on both databases.
+- **`institution_templates.configuration_json` had the same defect**, declared `jsonb` in V033 and
+  mapped `columnDefinition = "text"`. Broke TMPL-04 (save a custom template). Same fix.
+- **`spring.datasource.driver-class-name` was pinned to `org.h2.Driver`** in `application.yml`, so
+  overriding `SPRING_DATASOURCE_URL` — the documented way to point at PostgreSQL, and what the old
+  `docker-compose.yml` did — produced a driver mismatch. Removed; Spring infers it from the URL.
+
+Covered going forward by `PostgresMigrationTest` and `PostgresDemoSeedTest`, which skip themselves
+when PostgreSQL is unreachable so `./mvnw test` still needs no Docker.
+
+### Still open, now unblocked
+
+- **Partial unique indexes were deferred solely because H2 cannot express them** — active room
+  names, active subject codes, and one ACTIVE temporary schedule per timetable (see the Epic 5 and
+  Epic 7 sections below). All are enforced in service code only, and remain racy under concurrency.
+  With a PostgreSQL profile and a test that runs against it, a PostgreSQL-only migration directory
+  (`spring.flyway.locations` per profile) is now a viable home for them.
+- **The main suite still runs on H2 only.** The two PostgreSQL tests cover migrations and the
+  densest write path, not the 970-test suite. Testcontainers would let the whole suite run on
+  PostgreSQL in CI; the tradeoff is a Docker requirement and a slower run.
+
+## Promoted to stories (2026-08-16)
+
+Two long-standing entries below now have stories rather than notes, and should be read there:
+
+- **"The solver rearranges lessons; nothing creates them"** → **SCHED-17** (`docs/stories/6.sched-17.md`).
+  Generation from `class_subject_hours` + `teaching_groups`, one cycle week, plus the 30-teacher /
+  21-class demo fixture (`DemoDataSeeder`) the story is asserted against.
+- **"The solver still does not consume forbidden slots"**, **"`Lesson.teachingGroupId` is still never
+  populated"**, and the previously *unrecorded* absence of teacher/class/room double-booking
+  constraints → **SCHED-18** (`docs/stories/6.sched-18.md`).
+
+The double-booking gap was not previously written down anywhere and is the more serious of the two:
+`SchediFlowConstraintProvider` defines three constraints, and the planning `Lesson` carries no
+`classId` or `roomId`, so a solve may place every lesson in one slot and report zero hard violations.
+`ConflictDetectionService` rejects by hand what the solver is free to do. **FR19 and FR36 are not met**,
+notwithstanding SCHED-03/11 being marked done.
+
 ## Deferred from: implementation of Epic 9 EXPORT-01…EXPORT-08 (2026-08-03)
 
 - **EXPORT-04 does not exist.** There is no `9.export-04.md` and no entry in `sprint-status.yaml` — a gap in the original story numbering, not a skipped story. Worth confirming nothing was lost when Epic 9 was planned.

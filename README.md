@@ -7,6 +7,79 @@ This repo pins Java 21 via `.java-version` and `.sdkmanrc`, so running `sdk env 
 
 ---
 
+## Running locally
+
+```bash
+./mvnw spring-boot:run          # H2 in-memory, no services needed
+```
+
+Good enough to browse Swagger at http://localhost:8080/swagger-ui.html, and what the test suite
+uses. H2 runs in PostgreSQL *compatibility mode*, which is an approximation — anything you intend to
+ship should also be run against the real database.
+
+### Against PostgreSQL
+
+Run the external services in Docker and the application itself from your IDE, where you get a
+debugger and hot restart. [`docker-compose.services.yml`](docker-compose.services.yml) contains the
+dependencies and nothing else — PostgreSQL, MailHog, and Adminer behind a `tools` profile:
+
+```bash
+docker compose -f docker-compose.services.yml up -d
+SPRING_PROFILES_ACTIVE=postgres ./mvnw spring-boot:run
+```
+
+Add `demo` to seed a full 21-class school — 30 teachers, 231 teaching groups, a curriculum that fills
+every slot — so there is something real to look at:
+
+```bash
+SPRING_PROFILES_ACTIVE=postgres,demo ./mvnw spring-boot:run
+# sign in as admin@demo-school.demo / DemoPassw0rd!
+```
+
+The dataset's shape lives in [`application-demo.yml`](src/main/resources/application-demo.yml);
+change grades, cycle length, curriculum or staffing there and it validates your edit on startup.
+
+### The whole stack in Docker
+
+[`docker-compose.yml`](docker-compose.yml) adds the backend container on top. It `extends` the
+service definitions above rather than repeating them, so ports and credentials cannot drift between
+the two files, and both share one Compose project — the same containers and the same `postgres_data`
+volume, whichever file you use.
+
+```bash
+docker compose up -d                      # postgres + mailhog + backend
+docker compose --profile tools up -d      # + adminer (DB browser) on :8081
+docker compose --profile frontend up -d   # + frontend (needs ../schediflow-frontend)
+```
+
+Everything has a working default, so no `.env` is required to start; copy `.env.example` to `.env`
+to change secrets before this is reachable by anyone else.
+
+| File | Contains | Use when |
+|---|---|---|
+| `docker-compose.services.yml` | PostgreSQL, MailHog, Adminer | Developing — app runs from your IDE |
+| `docker-compose.yml` | The above, plus backend and frontend | Running the assembled stack |
+
+| Service | URL | Notes |
+|---|---|---|
+| Backend | http://localhost:8080 | Swagger at `/swagger-ui.html`, health at `/actuator/health` |
+| MailHog | http://localhost:8025 | Every email the app sends |
+| Adminer | http://localhost:8081 | `tools` profile; server `postgres` |
+| PostgreSQL | `localhost:5432` | `schediflow` / `schediflow` |
+
+### Tests
+
+```bash
+./mvnw test                                 # ~970 tests on H2
+docker compose -f docker-compose.services.yml up -d postgres
+./mvnw test -Dtest='Postgres*Test'          # migrations + seeding on real PostgreSQL 16
+```
+
+The PostgreSQL tests skip themselves when the database is unreachable, so the default run needs no
+Docker.
+
+---
+
 ## Documentation
 
 ### Product
@@ -118,6 +191,10 @@ Stories are in [`docs/stories/`](docs/stories/) — one file per story, prefixed
 - [6.sched-10](docs/stories/6.sched-10.md) — Atomic Lesson Swap (3 SP)
 - [6.sched-11](docs/stories/6.sched-11.md) — Conflict Detection Service (5 SP)
 - [6.sched-12](docs/stories/6.sched-12.md) — Lesson Updated WebSocket Broadcast (2 SP)
+- [6.sched-13](docs/stories/6.sched-13.md) — Schedule Checkpoints, Save & Restore (5 SP)
+- [6.sched-14](docs/stories/6.sched-14.md) — Targeted Partial Regeneration (5 SP)
+- [6.sched-17](docs/stories/6.sched-17.md) — Lesson Generation from Curriculum (8 SP) _(ready for dev)_
+- [6.sched-18](docs/stories/6.sched-18.md) — Planning Model & Core Clash Constraints (8 SP) _(ready for dev)_
 
 ### Epic 7 — Cover, Delegation & Temporary Schedules
 - [7.cover-01](docs/stories/7.cover-01.md) — Assign Cover Teacher (4 SP)

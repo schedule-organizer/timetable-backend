@@ -1,34 +1,62 @@
+# Full stack — external services plus the backend in a container.
+#
+#   docker compose up -d                      # postgres + mailhog + backend
+#   docker compose --profile tools up -d      # + adminer, a DB browser on :8081
+#   docker compose --profile frontend up -d   # + frontend (needs ../schediflow-frontend)
+#
+# For day-to-day development you usually want the dependencies only, with the app running from your
+# IDE — see docker-compose.services.yml, which is where postgres, mailhog and adminer are actually
+# defined. This file extends them so ports and credentials cannot drift between the two.
+#
+# Everything has a working default, so a fresh clone runs with no .env file. Copy .env.example to
+# .env and change the secrets before this is reachable by anyone else.
+
 services:
 
   postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: schediflow
-      POSTGRES_USER: schediflow
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U schediflow"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    extends:
+      file: docker-compose.services.yml
+      service: postgres
+
+  mailhog:
+    extends:
+      file: docker-compose.services.yml
+      service: mailhog
+
+  adminer:
+    extends:
+      file: docker-compose.services.yml
+      service: adminer
+    # extends does not carry profiles or depends_on; both are restated here.
+    profiles: [tools]
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   backend:
     build:
       context: .
       dockerfile: docker/Dockerfile
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/schediflow
-      SPRING_DATASOURCE_USERNAME: schediflow
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
-      MAIL_HOST: mailhog
-      MAIL_PORT: 1025
+      # postgres profile swaps the H2 default for the real database; add demo to seed the 21-class
+      # school, or prod to turn off Swagger. e.g. SPRING_PROFILES_ACTIVE=postgres,demo
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-postgres}
+      # Hardcoded to the service name rather than ${POSTGRES_URL}: that variable points at
+      # localhost for IDE runs, which is meaningless inside the container network.
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-schediflow}
+      POSTGRES_USER: ${POSTGRES_USER:-schediflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-schediflow}
+      JWT_SECRET: ${JWT_SECRET:-Y2hhbmdlLXRoaXMtaW4tcHJvZHVjdGlvbi1hdC1sZWFzdC0zMi1ieXRlcw==}
+      # The app reads SMTP_*, and only sends when MAIL_ENABLED is true — otherwise StubEmailService
+      # just logs. All three are needed for mail to actually reach MailHog.
+      MAIL_ENABLED: "true"
+      SMTP_HOST: mailhog
+      SMTP_PORT: "1025"
+      SMTP_FROM: ${SMTP_FROM:-no-reply@schediflow.local}
       STORAGE_PATH: /app/uploads
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      CALENDARIFIC_API_KEY: ${CALENDARIFIC_API_KEY:-}
     volumes:
       - uploads_data:/app/uploads
     ports:
@@ -36,28 +64,27 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      mailhog:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 60s
 
+  # Lives in a sibling repository; behind a profile so `docker compose up` works in a backend-only
+  # checkout instead of failing on a missing build context.
   frontend:
     build:
       context: ../schediflow-frontend
       dockerfile: Dockerfile
+    profiles: [frontend]
     ports:
       - "3000:80"
     depends_on:
       backend:
         condition: service_healthy
-
-  mailhog:
-    image: mailhog/mailhog
-    ports:
-      - "1025:1025"   # SMTP
-      - "8025:8025"   # Web UI — view sent emails at http://localhost:8025
 
 volumes:
   postgres_data:

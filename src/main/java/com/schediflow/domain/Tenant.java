@@ -1,6 +1,9 @@
 package com.schediflow.domain;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.OffsetDateTime;
 
 /**
@@ -24,7 +27,14 @@ public class Tenant {
     @Column(nullable = false, length = 50)
     private String status = "ACTIVE";
 
-    @Column(nullable = false)
+    /**
+     * CONFIG-04's settings blob. The column is {@code jsonb}; without an explicit JSON type code
+     * Hibernate binds this as {@code varchar}, which H2's compatibility mode accepts and PostgreSQL
+     * rejects outright ("column settings is of type jsonb but expression is of type character
+     * varying") — taking registration and every settings update with it.
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
     private String settings = "{}";
 
     @Column(name = "created_at", nullable = false, updatable = false)
