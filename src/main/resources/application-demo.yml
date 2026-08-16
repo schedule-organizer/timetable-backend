@@ -1,0 +1,200 @@
+# Demo dataset — the school that lesson generation (SCHED-17) and the solver are exercised against.
+#
+#   SPRING_PROFILES_ACTIVE=demo ./mvnw spring-boot:run
+#
+# Two rules the seeder enforces at startup, so a bad edit fails immediately with an explanation
+# rather than producing a quietly unsolvable timetable:
+#
+#   1. The curriculum must fill the cycle exactly.
+#      sum(subjects[].periods-per-cycle) == cycle.days * cycle.periods-per-day
+#      Currently 6+5+4+3+3+3+3+2+2+3+2 = 36 = 6 days x 6 periods.
+#
+#   2. No teacher may be dealt more than teachers.workload-cap.
+#      A subject's heaviest teacher carries ceil(classCount / subjects[].teachers) * periods-per-cycle.
+#      e.g. PHYS: ceil(21/2) = 11 classes x 3 periods = 33, under the cap of 34.
+#
+# Changing the school shape is a matter of editing this file. To model a primary school, try
+# grades [1..6], sections [A, B], a 5-day cycle and a lighter curriculum.
+
+app:
+  demo:
+    # Seed on startup. Tests set this false and call the seeder directly, once per test.
+    auto-seed: true
+
+    tenant:
+      slug: demo-school
+      name: Yerevan Secondary School No. 42
+      locale: hy-AM
+      timezone: Asia/Yerevan
+      admin-email: admin
+      password: DemoPassw0rd!
+
+    calendar:
+      academic-year-name: 2026/2027
+      academic-year-start: 2026-09-01
+      academic-year-end: 2027-06-15
+      term-name: Term 1
+      term-start: 2026-09-01
+      term-end: 2026-12-18
+
+    # 6 days x 6 teaching periods = 36 slots per class.
+    # 08:30-09:15, 09:25-10:10, 10:20-11:05, lunch 11:05-11:45, 11:45-12:30, 12:40-13:25, 13:35-14:20
+    cycle:
+      days: 6
+      periods-per-day: 6
+      first-period-start: "08:30"
+      period-minutes: 45
+      gap-minutes: 10
+      lunch-after-period: 3
+      lunch-minutes: 40
+
+    # 7 grades x 3 sections = 21 classes.
+    classes:
+      grades: [6, 7, 8, 9, 10, 11, 12]
+      sections: [A, B, C]
+      capacity: 28
+
+    # 30 teachers over 756 periods is 25.2 each — ~70% of the 36-slot week, above the 50-65% a real
+    # school runs. That tightness is deliberate: a solver that ignores teacher clashes looks correct
+    # on a loose fixture and fails on this one.
+    teachers:
+      workload-cap: 34
+      max-periods-per-day: 7
+      max-consecutive-periods: 4
+      surnames:
+        - Hovhannisyan
+        - Petrosyan
+        - Sargsyan
+        - Grigoryan
+        - Harutyunyan
+        - Khachatryan
+        - Manukyan
+        - Avetisyan
+        - Mkrtchyan
+        - Ghazaryan
+        - Sahakyan
+        - Karapetyan
+        - Vardanyan
+        - Stepanyan
+        - Melkonyan
+        - Danielyan
+        - Simonyan
+        - Gasparyan
+        - Minasyan
+        - Tadevosyan
+        - Arakelyan
+        - Movsisyan
+        - Baghdasaryan
+        - Hakobyan
+        - Poghosyan
+        - Aslanyan
+        - Galstyan
+        - Nersisyan
+        - Tovmasyan
+        - Yeghiazaryan
+
+    # One homeroom per class is implied. Labs are over-supplied on purpose: PHYS+CHEM+BIO+CS is 231
+    # lab lessons across 36 slots = 6.4 concurrent, so 8 labs leave a later room-assignment story a
+    # solvable starting position rather than an impossible one.
+    rooms:
+      homeroom-capacity: 30
+      labs: 8
+      gyms: 2
+      studios: 2
+
+    # teachers: how many staff hold the subject. Sized so the heaviest stays under workload-cap.
+    subjects:
+      - code: MATH
+        name: Mathematics
+        periods-per-cycle: 6
+        teachers: 5
+        color: "#3B82F6"
+        difficulty: 5
+        spread-pattern: SPREAD
+        max-per-day: 2
+      - code: LANG
+        name: Language & Literature
+        periods-per-cycle: 5
+        teachers: 4
+        color: "#8B5CF6"
+        difficulty: 4
+        spread-pattern: SPREAD
+        max-per-day: 2
+      - code: ENG
+        name: English
+        periods-per-cycle: 4
+        teachers: 3
+        color: "#06B6D4"
+        difficulty: 4
+        spread-pattern: SPREAD
+        max-per-day: 1
+      - code: PHYS
+        name: Physics
+        periods-per-cycle: 3
+        teachers: 2
+        color: "#EF4444"
+        difficulty: 5
+        spread-pattern: SPREAD
+        required-room-type: LAB
+        max-per-day: 1
+      - code: CHEM
+        name: Chemistry
+        periods-per-cycle: 3
+        teachers: 3
+        color: "#F59E0B"
+        difficulty: 5
+        spread-pattern: SPREAD
+        required-room-type: LAB
+        max-per-day: 1
+      - code: BIO
+        name: Biology
+        periods-per-cycle: 3
+        teachers: 2
+        color: "#10B981"
+        difficulty: 3
+        spread-pattern: SPREAD
+        required-room-type: LAB
+        max-per-day: 1
+      - code: HIST
+        name: History
+        periods-per-cycle: 3
+        teachers: 3
+        color: "#A16207"
+        difficulty: 3
+        spread-pattern: ANY
+        max-per-day: 1
+      - code: GEO
+        name: Geography
+        periods-per-cycle: 2
+        teachers: 2
+        color: "#65A30D"
+        difficulty: 2
+        spread-pattern: ANY
+        max-per-day: 1
+      - code: CS
+        name: Computer Science
+        periods-per-cycle: 2
+        teachers: 2
+        color: "#6366F1"
+        difficulty: 4
+        spread-pattern: CLUSTER
+        required-room-type: LAB
+        max-per-day: 2
+      - code: PE
+        name: Physical Education
+        periods-per-cycle: 3
+        teachers: 2
+        color: "#EC4899"
+        difficulty: 1
+        spread-pattern: SPREAD
+        required-room-type: GYM
+        max-per-day: 1
+      - code: ART
+        name: Art & Music
+        periods-per-cycle: 2
+        teachers: 2
+        color: "#F97316"
+        difficulty: 1
+        spread-pattern: ANY
+        required-room-type: OTHER
+        max-per-day: 1
